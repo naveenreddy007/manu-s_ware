@@ -1,77 +1,86 @@
-@import 'tailwindcss';
-@import 'tw-animate-css';
+@import "tailwindcss";
+@import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  /* Updated to MANUS luxury brand colors with cyan and green accents */
+  --background: oklch(0.99 0.005 106);
+  --foreground: oklch(0.15 0.01 106);
+  --card: oklch(0.98 0.005 106);
+  --card-foreground: oklch(0.15 0.01 106);
+  --popover: oklch(0.98 0.005 106);
+  --popover-foreground: oklch(0.15 0.01 106);
+  --primary: oklch(0.15 0.01 106);
+  --primary-foreground: oklch(0.99 0.005 106);
+  --secondary: oklch(0.95 0.01 106);
+  --secondary-foreground: oklch(0.15 0.01 106);
+  --muted: oklch(0.95 0.01 106);
+  --muted-foreground: oklch(0.55 0.01 106);
+  --accent: oklch(0.65 0.15 180);
+  --accent-foreground: oklch(0.99 0.005 106);
   --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+  --destructive-foreground: oklch(0.99 0.005 106);
+  --border: oklch(0.92 0.01 106);
+  --input: oklch(0.92 0.01 106);
+  --ring: oklch(0.65 0.15 180);
+  --chart-1: oklch(0.65 0.15 180);
+  --chart-2: oklch(0.55 0.12 140);
+  --chart-3: oklch(0.45 0.08 200);
+  --chart-4: oklch(0.75 0.1 160);
+  --chart-5: oklch(0.7 0.12 120);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: oklch(0.98 0.005 106);
+  --sidebar-foreground: oklch(0.15 0.01 106);
+  --sidebar-primary: oklch(0.15 0.01 106);
+  --sidebar-primary-foreground: oklch(0.99 0.005 106);
+  --sidebar-accent: oklch(0.95 0.01 106);
+  --sidebar-accent-foreground: oklch(0.15 0.01 106);
+  --sidebar-border: oklch(0.92 0.01 106);
+  --sidebar-ring: oklch(0.65 0.15 180);
+
+  /* Added MANUS luxury brand specific colors */
+  --manus-cyan: oklch(0.65 0.15 180);
+  --manus-green: oklch(0.55 0.12 140);
+  --manus-dark: oklch(0.15 0.01 106);
+  --manus-light: oklch(0.95 0.01 106);
+  --manus-accent: oklch(0.75 0.1 160);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
+  /* Updated dark mode colors for MANUS brand consistency */
+  --background: oklch(0.12 0.01 106);
+  --foreground: oklch(0.95 0.01 106);
+  --card: oklch(0.15 0.01 106);
+  --card-foreground: oklch(0.95 0.01 106);
+  --popover: oklch(0.15 0.01 106);
+  --popover-foreground: oklch(0.95 0.01 106);
+  --primary: oklch(0.95 0.01 106);
+  --primary-foreground: oklch(0.15 0.01 106);
+  --secondary: oklch(0.25 0.01 106);
+  --secondary-foreground: oklch(0.95 0.01 106);
+  --muted: oklch(0.25 0.01 106);
+  --muted-foreground: oklch(0.65 0.01 106);
+  --accent: oklch(0.65 0.15 180);
+  --accent-foreground: oklch(0.95 0.01 106);
+  --destructive: oklch(0.55 0.2 25);
+  --destructive-foreground: oklch(0.95 0.01 106);
+  --border: oklch(0.25 0.01 106);
+  --input: oklch(0.25 0.01 106);
+  --ring: oklch(0.65 0.15 180);
+  --chart-1: oklch(0.65 0.15 180);
+  --chart-2: oklch(0.55 0.12 140);
+  --chart-3: oklch(0.75 0.1 160);
+  --chart-4: oklch(0.6 0.15 200);
+  --chart-5: oklch(0.7 0.12 120);
+  --sidebar: oklch(0.15 0.01 106);
+  --sidebar-foreground: oklch(0.95 0.01 106);
+  --sidebar-primary: oklch(0.65 0.15 180);
+  --sidebar-primary-foreground: oklch(0.95 0.01 106);
+  --sidebar-accent: oklch(0.25 0.01 106);
+  --sidebar-accent-foreground: oklch(0.95 0.01 106);
+  --sidebar-border: oklch(0.25 0.01 106);
+  --sidebar-ring: oklch(0.65 0.15 180);
 }
 
 @theme inline {
@@ -111,6 +120,18 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Added MANUS brand color tokens */
+  --color-manus-cyan: var(--manus-cyan);
+  --color-manus-green: var(--manus-green);
+  --color-manus-dark: var(--manus-dark);
+  --color-manus-light: var(--manus-light);
+  --color-manus-accent: var(--manus-accent);
+
+  /* Added font family configuration for MANUS luxury branding */
+  --font-sans: "Open Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Montserrat", ui-serif, Georgia, serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
 @layer base {
@@ -118,6 +139,27 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+  }
+
+  /* Added MANUS luxury typography styles */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-serif font-semibold;
+  }
+
+  .manus-gradient {
+    background: linear-gradient(135deg, var(--manus-cyan), var(--manus-green));
+  }
+
+  .manus-text-gradient {
+    background: linear-gradient(135deg, var(--manus-cyan), var(--manus-green));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 }
