@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { ShoppingBag, Plus, Minus, X, CreditCard } from "lucide-react"
 import Image from "next/image"
+import Link from "next/link"
 
 interface CartItem {
   id: string
@@ -161,9 +162,15 @@ export function CartSidebar({ itemCount = 0 }: CartSidebarProps) {
                   <span className="text-xl font-bold text-foreground">${totalPrice.toFixed(2)}</span>
                 </div>
 
-                <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
-                  <CreditCard className="h-4 w-4 mr-2" />
-                  Checkout
+                <Button
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                  asChild
+                  onClick={() => setOpen(false)}
+                >
+                  <Link href="/checkout">
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    Checkout
+                  </Link>
                 </Button>
 
                 <Button variant="outline" className="w-full bg-transparent" onClick={() => setOpen(false)}>

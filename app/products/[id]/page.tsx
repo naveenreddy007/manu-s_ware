@@ -10,13 +10,19 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { WardrobeCompatibility } from "@/components/product/wardrobe-compatibility"
 import { StylingSuggestions } from "@/components/product/styling-suggestions"
-import { ArrowLeft, ShoppingBag, Heart, Share, CheckCircle } from "lucide-react"
+import { ProductReviews } from "@/components/product/product-reviews"
+import { ProductSpecifications } from "@/components/product/product-specifications"
+import { WishlistButton } from "@/components/wishlist/wishlist-button"
+import { SocialShareButtons } from "@/components/social/social-share-buttons"
+import { ArrowLeft, ShoppingBag, CheckCircle } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import { useToast } from "@/hooks/use-toast"
 import type { Product } from "@/lib/types/database"
 
 export default function ProductDetailPage() {
   const params = useParams()
   const router = useRouter()
+  const { toast } = useToast()
   const [product, setProduct] = useState<Product | null>(null)
   const [wardrobeCompatibility, setWardrobeCompatibility] = useState<any>(null)
   const [stylingRecommendations, setStylingRecommendations] = useState<any[]>([])
@@ -69,6 +75,11 @@ export default function ProductDetailPage() {
     }
 
     if (!selectedSize) {
+      toast({
+        title: "Size required",
+        description: "Please select a size before adding to cart",
+        variant: "destructive",
+      })
       return
     }
 
@@ -85,13 +96,39 @@ export default function ProductDetailPage() {
       })
 
       if (response.ok) {
-        // Show success feedback
-        console.log("Added to cart successfully")
+        toast({
+          title: "Added to cart",
+          description: `${product?.name} has been added to your cart`,
+        })
+      } else {
+        throw new Error("Failed to add to cart")
       }
     } catch (error) {
-      console.error("Failed to add to cart:", error)
+      toast({
+        title: "Error",
+        description: "Failed to add item to cart",
+        variant: "destructive",
+      })
     } finally {
       setAddingToCart(false)
+    }
+  }
+
+  const handleShare = async (platform: string) => {
+    if (user && product) {
+      try {
+        await fetch("/api/social/share", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            item_type: "product",
+            item_id: product.id,
+            platform,
+          }),
+        })
+      } catch (error) {
+        console.error("Error tracking share:", error)
+      }
     }
   }
 
@@ -124,7 +161,7 @@ export default function ProductDetailPage() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
           {/* Product Images */}
           <div className="space-y-4">
             <div className="relative aspect-[4/5] rounded-lg overflow-hidden">
@@ -199,12 +236,16 @@ export default function ProductDetailPage() {
                 )}
                 Add to Cart
               </Button>
-              <Button size="lg" variant="outline">
-                <Heart className="h-4 w-4" />
-              </Button>
-              <Button size="lg" variant="outline">
-                <Share className="h-4 w-4" />
-              </Button>
+              <WishlistButton productId={product.id} variant="outline" size="lg" />
+              <SocialShareButtons
+                url={`/products/${product.id}`}
+                title={`Check out this ${product.name} from MANUS`}
+                description={product.description}
+                image={product.images[0]}
+                hashtags={["MANUS", "mensfashion", product.category, ...(product.tags || [])]}
+                variant="outline"
+                size="lg"
+              />
             </div>
 
             {/* Product Features */}
@@ -243,9 +284,14 @@ export default function ProductDetailPage() {
           </div>
         </div>
 
+        {/* Product Specifications */}
+        <div className="mb-16">
+          <ProductSpecifications category={product.category} />
+        </div>
+
         {/* Wardrobe Integration Section */}
         {user && wardrobeCompatibility && (
-          <div className="mt-16 grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="mb-16 grid grid-cols-1 lg:grid-cols-2 gap-8">
             <WardrobeCompatibility
               totalItems={wardrobeCompatibility.total_items}
               compatibleItems={wardrobeCompatibility.compatible_items}
@@ -257,6 +303,11 @@ export default function ProductDetailPage() {
             )}
           </div>
         )}
+
+        {/* Reviews Section */}
+        <div className="mb-16">
+          <ProductReviews productId={product.id} />
+        </div>
 
         {/* Call to Action for Non-Users */}
         {!user && (
