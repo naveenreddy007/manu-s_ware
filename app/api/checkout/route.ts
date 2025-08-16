@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { type NextRequest, NextResponse } from "next/server"
+import { emailService } from "@/lib/email"
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,6 +38,13 @@ export async function POST(request: NextRequest) {
     if (cartError || !cartItems || cartItems.length === 0) {
       return NextResponse.json({ error: "Cart is empty" }, { status: 400 })
     }
+
+    // Get user profile for email
+    const { data: userProfile } = await supabase
+      .from("user_profiles")
+      .select("first_name, last_name")
+      .eq("user_id", user.id)
+      .single()
 
     // Calculate totals
     const subtotal = cartItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
@@ -178,6 +186,40 @@ export async function POST(request: NextRequest) {
 
     // Clear cart
     await supabase.from("cart_items").delete().eq("user_id", user.id)
+
+    try {
+      const customerName = userProfile
+        ? `${userProfile.first_name} ${userProfile.last_name}`
+        : `${shipping_address.first_name} ${shipping_address.last_name}`
+
+      await emailService.sendOrderConfirmation({
+        orderNumber: orderNumber,
+        customerName: customerName,
+        customerEmail: user.email!,
+        items: cartItems.map((item) => ({
+          name: item.product.name,
+          quantity: item.quantity,
+          price: item.product.price,
+          image_url: item.product.images?.[0] || "/placeholder.svg",
+        })),
+        subtotal: subtotal,
+        shipping: shippingCost,
+        tax: taxAmount,
+        total: totalAmount,
+        shippingAddress: {
+          full_name: `${shipping_address.first_name} ${shipping_address.last_name}`,
+          address_line_1: shipping_address.address_line1,
+          address_line_2: shipping_address.address_line2,
+          city: shipping_address.city,
+          state: shipping_address.state,
+          postal_code: shipping_address.postal_code,
+          country: shipping_address.country || "US",
+        },
+      })
+    } catch (emailError) {
+      console.error("Failed to send order confirmation email:", emailError)
+      // Don't fail the order if email fails
+    }
 
     return NextResponse.json({
       order: {

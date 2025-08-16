@@ -41,6 +41,32 @@ export async function getUserProfile(userId: string) {
 }
 
 export async function isAdmin(userId: string) {
+  const cookieStore = cookies()
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value
+        },
+      },
+    },
+  )
+
+  // Check user profile table first
   const profile = await getUserProfile(userId)
-  return profile?.role === "admin"
+  if (profile?.role === "admin") {
+    return true
+  }
+
+  // Fallback: check auth metadata
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (user?.user_metadata?.role === "admin" || user?.raw_user_meta_data?.role === "admin") {
+    return true
+  }
+
+  return false
 }

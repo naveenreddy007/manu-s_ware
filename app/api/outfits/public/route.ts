@@ -15,7 +15,6 @@ export async function GET(request: NextRequest) {
       .from("outfits")
       .select(`
         *,
-        user_profiles!inner(first_name, last_name, avatar_url),
         outfit_items (
           *,
           wardrobe_items:wardrobe_items!outfit_items_item_id_fkey (*),
@@ -29,11 +28,26 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error
 
+    const userIds = [...new Set(outfits?.map((outfit) => outfit.user_id) || [])]
+    const { data: userProfiles } = await supabase
+      .from("user_profiles")
+      .select("user_id, first_name, last_name")
+      .in("user_id", userIds)
+
+    const outfitsWithUsers =
+      outfits?.map((outfit) => ({
+        ...outfit,
+        user_profiles: userProfiles?.find((profile) => profile.user_id === outfit.user_id) || {
+          first_name: "Anonymous",
+          last_name: "User",
+        },
+      })) || []
+
     // Get total count for pagination
     const { count } = await supabase.from("outfits").select("*", { count: "exact", head: true }).eq("is_public", true)
 
     return NextResponse.json({
-      outfits: outfits || [],
+      outfits: outfitsWithUsers,
       pagination: {
         page,
         limit,

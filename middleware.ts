@@ -23,14 +23,17 @@ export async function middleware(request: NextRequest) {
   // Refresh session if expired
   await supabase.auth.getSession()
 
-  // Protected routes
-  if (request.nextUrl.pathname.startsWith("/wardrobe")) {
+  const protectedRoutes = ["/wardrobe", "/profile", "/orders", "/wishlist", "/outfit-planner", "/recommendations"]
+  const isProtectedRoute = protectedRoutes.some((route) => request.nextUrl.pathname.startsWith(route))
+
+  if (isProtectedRoute) {
     const {
       data: { session },
     } = await supabase.auth.getSession()
 
     if (!session) {
       const redirectUrl = new URL("/auth/login", request.url)
+      redirectUrl.searchParams.set("redirect", request.nextUrl.pathname)
       return NextResponse.redirect(redirectUrl)
     }
   }

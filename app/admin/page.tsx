@@ -2,6 +2,7 @@ import { redirect } from "next/navigation"
 import { getUser, isAdmin } from "@/lib/auth-utils"
 import { AdminStats } from "@/components/admin/admin-stats"
 import { ProductManagement } from "@/components/admin/product-management"
+import { OrderManagement } from "@/components/admin/order-management"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default async function AdminPage() {
@@ -40,9 +41,7 @@ export default async function AdminPage() {
         </TabsContent>
 
         <TabsContent value="orders">
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">Order management coming soon...</p>
-          </div>
+          <OrderManagement />
         </TabsContent>
 
         <TabsContent value="users">

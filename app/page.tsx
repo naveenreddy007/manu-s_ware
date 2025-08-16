@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { ProductFilters } from "@/components/product-filters"
 import { CartSidebar } from "@/components/cart/cart-sidebar"
 import { Button } from "@/components/ui/button"
-import { User, Menu, LogOut, Sparkles, Heart, Palette } from "lucide-react"
+import { User, Menu, LogOut, Sparkles, Heart, Palette, Settings } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { signOut } from "@/lib/actions"
 import Link from "next/link"
@@ -21,6 +21,7 @@ export default function HomePage() {
   const [pagination, setPagination] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
     checkAuth()
@@ -38,6 +39,17 @@ export default function HomePage() {
       data: { user },
     } = await supabase.auth.getUser()
     setUser(user)
+
+    if (user) {
+      try {
+        const { data: profile } = await supabase.from("user_profiles").select("role").eq("user_id", user.id).single()
+
+        setIsAdmin(profile?.role === "admin")
+      } catch (error) {
+        console.error("Failed to check admin status:", error)
+        setIsAdmin(false)
+      }
+    }
   }
 
   const fetchCategories = async () => {
@@ -73,7 +85,6 @@ export default function HomePage() {
 
   const handlePageChange = (page: number) => {
     fetchProducts(page)
-    // Scroll to top of results
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
@@ -148,6 +159,13 @@ export default function HomePage() {
                       </svg>
                     </Link>
                   </Button>
+                  {isAdmin && (
+                    <Button variant="ghost" size="icon" asChild>
+                      <Link href="/admin">
+                        <Settings className="h-5 w-5" />
+                      </Link>
+                    </Button>
+                  )}
                   <Button variant="ghost" size="icon" asChild>
                     <Link href="/profile">
                       <User className="h-5 w-5" />
