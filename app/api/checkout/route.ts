@@ -14,7 +14,16 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { shipping_address, billing_address, payment_method = "credit_card", same_as_shipping = false } = body
+    const {
+      shipping_address,
+      billing_address,
+      payment_method = "credit_card",
+      same_as_shipping = false,
+      save_shipping_address = false,
+      save_billing_address = false,
+      shipping_is_default = false,
+      billing_is_default = false,
+    } = body
 
     // Get cart items
     const { data: cartItems, error: cartError } = await supabase
@@ -40,6 +49,77 @@ export async function POST(request: NextRequest) {
     const { data: orderNumberResult } = await supabase.rpc("generate_order_number")
     const orderNumber = orderNumberResult || `MAN-${Date.now()}`
 
+    let shippingAddressId = null
+    let billingAddressId = null
+
+    if (save_shipping_address && shipping_address) {
+      // If marking as default, unset other default shipping addresses
+      if (shipping_is_default) {
+        await supabase
+          .from("customer_addresses")
+          .update({ is_default: false })
+          .eq("user_id", user.id)
+          .eq("type", "shipping")
+      }
+
+      const { data: savedShippingAddress, error: shippingAddressError } = await supabase
+        .from("customer_addresses")
+        .insert({
+          user_id: user.id,
+          type: "shipping",
+          full_name: `${shipping_address.first_name} ${shipping_address.last_name}`,
+          company: shipping_address.company || null,
+          address_line_1: shipping_address.address_line1,
+          address_line_2: shipping_address.address_line2 || null,
+          city: shipping_address.city,
+          state: shipping_address.state,
+          postal_code: shipping_address.postal_code,
+          country: shipping_address.country || "US",
+          phone: shipping_address.phone || null,
+          is_default: shipping_is_default,
+        })
+        .select()
+        .single()
+
+      if (!shippingAddressError && savedShippingAddress) {
+        shippingAddressId = savedShippingAddress.id
+      }
+    }
+
+    if (save_billing_address && !same_as_shipping && billing_address) {
+      // If marking as default, unset other default billing addresses
+      if (billing_is_default) {
+        await supabase
+          .from("customer_addresses")
+          .update({ is_default: false })
+          .eq("user_id", user.id)
+          .eq("type", "billing")
+      }
+
+      const { data: savedBillingAddress, error: billingAddressError } = await supabase
+        .from("customer_addresses")
+        .insert({
+          user_id: user.id,
+          type: "billing",
+          full_name: `${billing_address.first_name} ${billing_address.last_name}`,
+          company: billing_address.company || null,
+          address_line_1: billing_address.address_line1,
+          address_line_2: billing_address.address_line2 || null,
+          city: billing_address.city,
+          state: billing_address.state,
+          postal_code: billing_address.postal_code,
+          country: billing_address.country || "US",
+          phone: billing_address.phone || null,
+          is_default: billing_is_default,
+        })
+        .select()
+        .single()
+
+      if (!billingAddressError && savedBillingAddress) {
+        billingAddressId = savedBillingAddress.id
+      }
+    }
+
     // Create order
     const { data: order, error: orderError } = await supabase
       .from("orders")
@@ -50,6 +130,8 @@ export async function POST(request: NextRequest) {
         shipping_cost: shippingCost,
         tax_amount: taxAmount,
         total_amount: totalAmount,
+        shipping_address_id: shippingAddressId,
+        billing_address_id: billingAddressId,
         shipping_first_name: shipping_address.first_name,
         shipping_last_name: shipping_address.last_name,
         shipping_address_line1: shipping_address.address_line1,
