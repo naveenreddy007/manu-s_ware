@@ -7,18 +7,18 @@ import { ArrowLeft, ShoppingBag } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import { useCart } from "@/lib/contexts/cart-context"
 
 export default function CheckoutPage() {
-  const { items: cartItems, loading, totalPrice } = useCart()
+  const [cartItems, setCartItems] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
   const router = useRouter()
 
   useEffect(() => {
-    checkAuth()
+    checkAuthAndFetchCart()
   }, [])
 
-  const checkAuth = async () => {
+  const checkAuthAndFetchCart = async () => {
     const supabase = createClient()
     const {
       data: { user },
@@ -30,6 +30,21 @@ export default function CheckoutPage() {
     }
 
     setUser(user)
+    await fetchCartItems()
+  }
+
+  const fetchCartItems = async () => {
+    try {
+      const response = await fetch("/api/cart")
+      if (response.ok) {
+        const data = await response.json()
+        setCartItems(data.items || [])
+      }
+    } catch (error) {
+      console.error("Failed to fetch cart items:", error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (loading) {
@@ -57,7 +72,7 @@ export default function CheckoutPage() {
     )
   }
 
-  const subtotal = totalPrice
+  const subtotal = cartItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
 
   return (
     <div className="min-h-screen bg-background">

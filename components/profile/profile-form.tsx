@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import Link from "next/link"
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
@@ -313,6 +314,85 @@ export function ProfileForm() {
               checked={profile.notification_preferences?.push_notifications ?? true}
               onCheckedChange={(checked) => updateNotificationPreference("push_notifications", checked)}
             />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Account Security */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Account Security</CardTitle>
+          <CardDescription>Manage your account security settings</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Change Password</Label>
+              <p className="text-sm text-muted-foreground">Update your account password</p>
+            </div>
+            <Button variant="outline" asChild>
+              <Link href="/auth/change-password">Change Password</Link>
+            </Button>
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Two-Factor Authentication</Label>
+              <p className="text-sm text-muted-foreground">Add an extra layer of security to your account</p>
+            </div>
+            <Button variant="outline" disabled>
+              Coming Soon
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Data Management */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Data Management</CardTitle>
+          <CardDescription>Manage your account data and privacy</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Export Data</Label>
+              <p className="text-sm text-muted-foreground">Download a copy of your account data</p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => {
+                toast({
+                  title: "Export Requested",
+                  description: "Your data export will be emailed to you within 24 hours",
+                })
+              }}
+            >
+              Export Data
+            </Button>
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label className="text-destructive">Delete Account</Label>
+              <p className="text-sm text-muted-foreground">Permanently delete your account and all data</p>
+            </div>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                toast({
+                  title: "Account Deletion",
+                  description: "Please contact support to delete your account",
+                  variant: "destructive",
+                })
+              }}
+            >
+              Delete Account
+            </Button>
           </div>
         </CardContent>
       </Card>

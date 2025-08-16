@@ -1,9 +1,17 @@
+"use client"
+
+import type React from "react"
+
 import Link from "next/link"
+import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Heart, ShoppingBag } from "lucide-react"
+import { Heart, ShoppingBag, Loader2 } from "lucide-react"
 import { ImageWithFallback } from "@/components/ui/image-with-fallback"
+import { useToast } from "@/hooks/use-toast"
+import { createClient } from "@/lib/supabase/client"
+import { useRouter } from "next/navigation"
 import type { Product } from "@/lib/types/database"
 
 interface ProductCardProps {
@@ -12,6 +20,66 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, priority = false }: ProductCardProps) {
+  const [isAddingToCart, setIsAddingToCart] = useState(false)
+  const { toast } = useToast()
+  const router = useRouter()
+
+  const handleAddToCart = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    setIsAddingToCart(true)
+
+    try {
+      const supabase = createClient()
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser()
+
+      if (authError || !user) {
+        toast({
+          title: "Sign in required",
+          description: "Please sign in to add items to your cart.",
+          variant: "destructive",
+        })
+        router.push(`/auth/login?redirect=${encodeURIComponent(window.location.pathname)}`)
+        return
+      }
+
+      const response = await fetch("/api/cart", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          product_id: product.id,
+          size: "M", // Default size - could be made dynamic
+          quantity: 1,
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to add to cart")
+      }
+
+      toast({
+        title: "Added to cart",
+        description: `${product.name} has been added to your cart.`,
+      })
+    } catch (error) {
+      console.error("Add to cart error:", error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to add item to cart. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsAddingToCart(false)
+    }
+  }
+
   return (
     <Card className="group overflow-hidden border-0 bg-card hover:shadow-lg transition-all duration-300">
       <div className="relative aspect-[3/4] overflow-hidden">
@@ -62,9 +130,18 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
             <Button size="sm" variant="outline" asChild>
               <Link href={`/products/${product.id}`}>View</Link>
             </Button>
-            <Button size="sm" className="bg-primary hover:bg-primary/90">
-              <ShoppingBag className="h-4 w-4 mr-1" />
-              Add
+            <Button
+              size="sm"
+              className="bg-primary hover:bg-primary/90"
+              onClick={handleAddToCart}
+              disabled={isAddingToCart}
+            >
+              {isAddingToCart ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : (
+                <ShoppingBag className="h-4 w-4 mr-1" />
+              )}
+              {isAddingToCart ? "Adding..." : "Add"}
             </Button>
           </div>
         </div>
