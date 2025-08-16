@@ -1,6 +1,19 @@
 import { Resend } from "resend"
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+let resend: Resend | null = null
+
+function getResendClient(): Resend | null {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("RESEND_API_KEY not found. Email functionality will be disabled.")
+    return null
+  }
+
+  if (!resend) {
+    resend = new Resend(process.env.RESEND_API_KEY)
+  }
+
+  return resend
+}
 
 export interface OrderConfirmationData {
   orderNumber: string
@@ -49,8 +62,14 @@ export interface StyleRecommendationData {
 
 export const emailService = {
   async sendOrderConfirmation(data: OrderConfirmationData) {
+    const client = getResendClient()
+    if (!client) {
+      console.log("Email service not available - skipping order confirmation email")
+      return null
+    }
+
     try {
-      const { data: result, error } = await resend.emails.send({
+      const { data: result, error } = await client.emails.send({
         from: "MANUS <orders@manus.style>",
         to: [data.customerEmail],
         subject: `Order Confirmation - ${data.orderNumber}`,
@@ -66,8 +85,14 @@ export const emailService = {
   },
 
   async sendShippingUpdate(data: ShippingUpdateData) {
+    const client = getResendClient()
+    if (!client) {
+      console.log("Email service not available - skipping shipping update email")
+      return null
+    }
+
     try {
-      const { data: result, error } = await resend.emails.send({
+      const { data: result, error } = await client.emails.send({
         from: "MANUS <shipping@manus.style>",
         to: [data.customerEmail],
         subject: `Shipping Update - ${data.orderNumber}`,
@@ -83,8 +108,14 @@ export const emailService = {
   },
 
   async sendStyleRecommendations(data: StyleRecommendationData) {
+    const client = getResendClient()
+    if (!client) {
+      console.log("Email service not available - skipping style recommendations email")
+      return null
+    }
+
     try {
-      const { data: result, error } = await resend.emails.send({
+      const { data: result, error } = await client.emails.send({
         from: "MANUS <style@manus.style>",
         to: [data.customerEmail],
         subject: "Personalized Style Recommendations from MANUS",
@@ -100,8 +131,14 @@ export const emailService = {
   },
 
   async sendWelcomeEmail(customerName: string, customerEmail: string) {
+    const client = getResendClient()
+    if (!client) {
+      console.log("Email service not available - skipping welcome email")
+      return null
+    }
+
     try {
-      const { data: result, error } = await resend.emails.send({
+      const { data: result, error } = await client.emails.send({
         from: "MANUS <welcome@manus.style>",
         to: [customerEmail],
         subject: "Welcome to MANUS - Your Style Journey Begins",
