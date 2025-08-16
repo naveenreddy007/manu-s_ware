@@ -1,79 +1,19 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { ShoppingBag, Plus, Minus, X, CreditCard } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { useCart } from "@/lib/contexts/cart-context"
 
-interface CartItem {
-  id: string
-  product_id: string
-  size: string
-  quantity: number
-  product: {
-    id: string
-    name: string
-    price: number
-    images: string[]
-  }
-}
+type CartSidebarProps = {}
 
-interface CartSidebarProps {
-  itemCount?: number
-}
-
-export function CartSidebar({ itemCount = 0 }: CartSidebarProps) {
-  const [items, setItems] = useState<CartItem[]>([])
-  const [loading, setLoading] = useState(false)
+export function CartSidebar() {
   const [open, setOpen] = useState(false)
-
-  useEffect(() => {
-    if (open) {
-      fetchCartItems()
-    }
-  }, [open])
-
-  const fetchCartItems = async () => {
-    setLoading(true)
-    try {
-      const response = await fetch("/api/cart")
-      if (response.ok) {
-        const data = await response.json()
-        setItems(data.items || [])
-      }
-    } catch (error) {
-      console.error("Failed to fetch cart items:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const updateQuantity = async (itemId: string, newQuantity: number) => {
-    try {
-      const response = await fetch("/api/cart", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ item_id: itemId, quantity: newQuantity }),
-      })
-
-      if (response.ok) {
-        if (newQuantity <= 0) {
-          setItems(items.filter((item) => item.id !== itemId))
-        } else {
-          const data = await response.json()
-          setItems(items.map((item) => (item.id === itemId ? data.item : item)))
-        }
-      }
-    } catch (error) {
-      console.error("Failed to update cart item:", error)
-    }
-  }
-
-  const totalPrice = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
-  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0)
+  const { items, totalItems, totalPrice, loading, updateQuantity } = useCart()
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>

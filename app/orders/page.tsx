@@ -40,29 +40,50 @@ export default function OrdersPage() {
   }, [])
 
   const checkAuthAndFetchOrders = async () => {
-    const supabase = createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    try {
+      console.log("[v0] Checking auth for orders page...")
+      const supabase = createClient()
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser()
 
-    if (!user) {
+      console.log("[v0] Orders page auth result:", { user: user?.id, error })
+
+      if (!user) {
+        console.log("[v0] No user found, redirecting to login")
+        router.push("/auth/login?redirect=/orders")
+        return
+      }
+
+      setUser(user)
+      await fetchOrders()
+    } catch (error) {
+      console.error("[v0] Auth check failed on orders page:", error)
       router.push("/auth/login?redirect=/orders")
-      return
     }
-
-    setUser(user)
-    await fetchOrders()
   }
 
   const fetchOrders = async () => {
     try {
+      console.log("[v0] Fetching orders...")
       const response = await fetch("/api/orders")
+
+      if (response.status === 401) {
+        console.log("[v0] Unauthorized access to orders")
+        router.push("/auth/login?redirect=/orders")
+        return
+      }
+
       if (response.ok) {
         const data = await response.json()
+        console.log("[v0] Orders loaded:", data.orders?.length || 0)
         setOrders(data.orders || [])
+      } else {
+        console.error("[v0] Failed to fetch orders:", response.status)
       }
     } catch (error) {
-      console.error("Failed to fetch orders:", error)
+      console.error("[v0] Failed to fetch orders:", error)
     } finally {
       setLoading(false)
     }

@@ -2,6 +2,8 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Montserrat, Open_Sans } from "next/font/google"
 import "./globals.css"
+import { CartProvider } from "@/lib/contexts/cart-context"
+import { Toaster } from "@/components/ui/toaster"
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -38,7 +40,12 @@ html {
 }
         `}</style>
       </head>
-      <body>{children}</body>
+      <body>
+        <CartProvider>
+          {children}
+          <Toaster />
+        </CartProvider>
+      </body>
     </html>
   )
 }
