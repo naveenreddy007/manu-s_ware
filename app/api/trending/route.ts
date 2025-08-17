@@ -5,6 +5,8 @@ export async function GET() {
   const supabase = createClient()
 
   try {
+    console.log("[v0] Trending API called - starting data fetch...")
+
     // Get trending products based on recent orders
     const { data: trendingProducts, error: productsError } = await supabase
       .from("products")
@@ -14,7 +16,9 @@ export async function GET() {
       .limit(8)
 
     if (productsError) {
-      console.error("Error fetching trending products:", productsError)
+      console.error("[v0] Error fetching trending products:", productsError)
+    } else {
+      console.log("[v0] Found", trendingProducts?.length || 0, "trending products")
     }
 
     const { data: categoryData, error: categoryError } = await supabase
@@ -44,7 +48,7 @@ export async function GET() {
         { category: "pants", count: 8 },
         { category: "shoes", count: 6 },
         { category: "accessories", count: 4 },
-        { category: "outerwear", count: 3 },
+        { category: "jackets", count: 3 },
       ]
     }
 
@@ -57,7 +61,9 @@ export async function GET() {
       .limit(6)
 
     if (outfitsError) {
-      console.error("Error fetching popular outfits:", outfitsError)
+      console.error("[v0] Error fetching popular outfits:", outfitsError)
+    } else {
+      console.log("[v0] Found", popularOutfits?.length || 0, "popular outfits")
     }
 
     const trendingStyles: { style: string; count: number }[] = [
@@ -68,15 +74,23 @@ export async function GET() {
       { style: "minimalist", count: 5 },
     ]
 
-    return NextResponse.json({
+    const response = {
       trending_products: trendingProducts || [],
       trending_categories: trendingCategories,
       popular_outfits: popularOutfits || [],
       trending_styles: trendingStyles,
       last_updated: new Date().toISOString(),
+    }
+
+    console.log("[v0] Trending API response prepared successfully")
+    return NextResponse.json(response, {
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "public, max-age=300",
+      },
     })
   } catch (error) {
-    console.error("Trending API error:", error)
+    console.error("[v0] Trending API error:", error)
     return NextResponse.json(
       {
         trending_products: [],
@@ -84,15 +98,24 @@ export async function GET() {
           { category: "shirts", count: 10 },
           { category: "pants", count: 8 },
           { category: "shoes", count: 6 },
+          { category: "accessories", count: 4 },
+          { category: "jackets", count: 3 },
         ],
         popular_outfits: [],
         trending_styles: [
           { style: "casual", count: 15 },
           { style: "business", count: 12 },
+          { style: "formal", count: 8 },
         ],
         last_updated: new Date().toISOString(),
+        error: "Fallback data provided due to database error",
       },
-      { status: 200 },
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      },
     )
   }
 }

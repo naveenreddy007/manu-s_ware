@@ -1,40 +1,28 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { OutfitShareCard } from "@/components/social/outfit-share-card"
-import { ProductCardSkeleton } from "@/components/loading/product-card-skeleton"
+import { InspirationFeed } from "@/components/inspiration/inspiration-feed"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Plus, TrendingUp, Users, Bookmark, User } from "lucide-react"
+import Link from "next/link"
+import { createClient } from "@/lib/supabase/client"
+import { MyPostsManager } from "@/components/inspiration/my-posts-manager"
 
 export default function InspirationPage() {
-  const [outfits, setOutfits] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [pagination, setPagination] = useState<any>(null)
-  const [currentPage, setCurrentPage] = useState(1)
+  const [user, setUser] = useState<any>(null)
+  const [activeTab, setActiveTab] = useState("feed")
+  const supabase = createClient()
 
   useEffect(() => {
-    fetchOutfits(currentPage)
-  }, [currentPage])
+    checkUser()
+  }, [])
 
-  const fetchOutfits = async (page: number) => {
-    setLoading(true)
-    try {
-      const response = await fetch(`/api/outfits/public?page=${page}&limit=12`)
-      if (response.ok) {
-        const data = await response.json()
-        setOutfits(data.outfits || [])
-        setPagination(data.pagination)
-      }
-    } catch (error) {
-      console.error("Error fetching outfits:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page)
-    window.scrollTo({ top: 0, behavior: "smooth" })
+  const checkUser = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    setUser(user)
   }
 
   return (
@@ -42,77 +30,100 @@ export default function InspirationPage() {
       {/* Header */}
       <header className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
-          <h1 className="text-2xl font-heading font-black text-primary">Style Inspiration</h1>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-heading font-black text-primary">Style Inspiration</h1>
+              <p className="text-sm text-muted-foreground">Discover and share amazing outfit ideas</p>
+            </div>
+
+            {user && (
+              <Link href="/inspiration/create">
+                <Button className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Share Your Style
+                </Button>
+              </Link>
+            )}
+          </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h2 className="text-3xl font-heading font-bold mb-2">Outfit Inspiration</h2>
-          <p className="text-muted-foreground">
-            Discover how other MANUS users style their outfits and get inspired for your own wardrobe
-          </p>
-        </div>
-
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <ProductCardSkeleton key={i} />
-            ))}
-          </div>
-        ) : outfits.length > 0 ? (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {outfits.map((outfit) => (
-                <OutfitShareCard key={outfit.id} outfit={outfit} />
-              ))}
-            </div>
-
-            {pagination && pagination.totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(pagination.page - 1)}
-                  disabled={pagination.page <= 1}
-                >
-                  <ChevronLeft className="h-4 w-4 mr-1" />
-                  Previous
-                </Button>
-
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-                    const pageNum = i + 1
-                    return (
-                      <Button
-                        key={pageNum}
-                        variant={pageNum === pagination.page ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => handlePageChange(pageNum)}
-                        className="w-8 h-8 p-0"
-                      >
-                        {pageNum}
-                      </Button>
-                    )
-                  })}
-                </div>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(pagination.page + 1)}
-                  disabled={pagination.page >= pagination.totalPages}
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
-              </div>
+      <main className="container mx-auto px-4 py-8 max-w-4xl">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className={`grid w-full ${user ? "grid-cols-5" : "grid-cols-4"} mb-8`}>
+            <TabsTrigger value="feed" className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Feed
+            </TabsTrigger>
+            <TabsTrigger value="trending" className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Trending
+            </TabsTrigger>
+            <TabsTrigger value="following" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Following
+            </TabsTrigger>
+            <TabsTrigger value="saved" className="flex items-center gap-2">
+              <Bookmark className="h-4 w-4" />
+              Saved
+            </TabsTrigger>
+            {user && (
+              <TabsTrigger value="my-posts" className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                My Posts
+              </TabsTrigger>
             )}
-          </>
-        ) : (
-          <div className="text-center py-12">
-            <h3 className="text-lg font-semibold mb-2">No outfits shared yet</h3>
-            <p className="text-muted-foreground">Be the first to share your outfit inspiration!</p>
+          </TabsList>
+
+          <TabsContent value="feed" className="space-y-6">
+            <InspirationFeed />
+          </TabsContent>
+
+          <TabsContent value="trending" className="space-y-6">
+            <div className="text-center py-12">
+              <TrendingUp className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-lg font-semibold mb-2">Trending Outfits</h3>
+              <p className="text-muted-foreground">Coming soon - discover the most popular outfit inspirations</p>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="following" className="space-y-6">
+            <div className="text-center py-12">
+              <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-lg font-semibold mb-2">Following</h3>
+              <p className="text-muted-foreground">Follow other users to see their latest outfit inspirations here</p>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="saved" className="space-y-6">
+            <div className="text-center py-12">
+              <Bookmark className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-lg font-semibold mb-2">Saved Outfits</h3>
+              <p className="text-muted-foreground">Your saved outfit inspirations will appear here</p>
+            </div>
+          </TabsContent>
+
+          {user && (
+            <TabsContent value="my-posts" className="space-y-6">
+              <MyPostsManager />
+            </TabsContent>
+          )}
+        </Tabs>
+
+        {!user && (
+          <div className="mt-12 text-center p-8 bg-muted/50 rounded-lg">
+            <h3 className="text-lg font-semibold mb-2">Join the MANUS Community</h3>
+            <p className="text-muted-foreground mb-4">
+              Sign up to share your outfit inspirations, save favorites, and earn from your style influence
+            </p>
+            <div className="flex gap-2 justify-center">
+              <Link href="/auth/sign-up">
+                <Button>Sign Up</Button>
+              </Link>
+              <Link href="/auth/login">
+                <Button variant="outline">Log In</Button>
+              </Link>
+            </div>
           </div>
         )}
       </main>

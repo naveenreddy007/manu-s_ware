@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 
 export async function GET(request: NextRequest) {
   try {
+    console.log("[v0] Search trending API called")
     const supabase = createClient()
 
     // Get trending products based on recent activity
@@ -43,15 +44,35 @@ export async function GET(request: NextRequest) {
       trendingCategories = ["shirts", "pants", "shoes", "accessories", "outerwear"]
     }
 
-    return NextResponse.json({
-      trendingProducts: trendingProducts || [],
-      trendingCategories,
+    console.log("[v0] Search trending API returning data:", {
+      productsCount: trendingProducts?.length || 0,
+      categoriesCount: trendingCategories.length,
     })
+
+    return NextResponse.json(
+      {
+        trendingProducts: trendingProducts || [],
+        trendingCategories,
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "public, max-age=300",
+        },
+      },
+    )
   } catch (error) {
-    console.error("Error fetching trending data:", error)
-    return NextResponse.json({
-      trendingProducts: [],
-      trendingCategories: ["shirts", "pants", "shoes", "accessories", "outerwear"],
-    })
+    console.error("[v0] Error fetching search trending data:", error)
+    return NextResponse.json(
+      {
+        trendingProducts: [],
+        trendingCategories: ["shirts", "pants", "shoes", "accessories", "outerwear"],
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      },
+    )
   }
 }
