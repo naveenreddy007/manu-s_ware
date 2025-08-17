@@ -1,44 +1,53 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
-import { getUser, isAdmin } from "@/lib/auth-utils"
+import { createClient } from "@/lib/supabase/server"
+import { requireAdmin } from "@/lib/auth"
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const user = await getUser()
-    if (!user || !(await isAdmin(user.id))) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    await requireAdmin()
 
-    const { status } = await request.json()
+    const body = await request.json()
+    const { status, tracking_number, notes } = body
     const orderId = params.id
 
-    const cookieStore = cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-        },
-      },
-    )
+    const supabase = createClient()
 
-    const { data, error } = await supabase
-      .from("orders")
-      .update({ status, updated_at: new Date().toISOString() })
-      .eq("id", orderId)
-      .select()
-      .single()
+    const updateData: any = {
+      status,
+      updated_at: new Date().toISOString(),
+    }
+
+    if (tracking_number !== undefined) {
+      updateData.tracking_number = tracking_number
+    }
+
+    if (notes !== undefined) {
+      updateData.notes = notes
+    }
+
+    const { data, error } = await supabase.from("orders").update(updateData).eq("id", orderId).select().single()
 
     if (error) {
+      console.error("[v0] Error updating order:", error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json(data)
-  } catch (error) {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json(data, {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+  } catch (error: any) {
+    console.error("[v0] Error in order update API:", error)
+    return NextResponse.json(
+      { error: "Internal server error", details: error.message },
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      },
+    )
   }
 }

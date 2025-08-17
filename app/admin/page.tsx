@@ -4,6 +4,8 @@ import { AdminStats } from "@/components/admin/admin-stats"
 import { ProductManagement } from "@/components/admin/product-management"
 import { OrderManagement } from "@/components/admin/order-management"
 import { UserManagement } from "@/components/admin/user-management"
+import { AdminSettings } from "@/components/admin/admin-settings"
+import { CategoryManagement } from "@/components/admin/category-management"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default async function AdminPage() {
@@ -37,8 +39,10 @@ export default async function AdminPage() {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="products">Products</TabsTrigger>
+          <TabsTrigger value="categories">Categories</TabsTrigger>
           <TabsTrigger value="orders">Orders</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
@@ -49,12 +53,20 @@ export default async function AdminPage() {
           <ProductManagement />
         </TabsContent>
 
+        <TabsContent value="categories">
+          <CategoryManagement />
+        </TabsContent>
+
         <TabsContent value="orders">
           <OrderManagement />
         </TabsContent>
 
         <TabsContent value="users">
           <UserManagement />
+        </TabsContent>
+
+        <TabsContent value="settings">
+          <AdminSettings />
         </TabsContent>
       </Tabs>
     </div>

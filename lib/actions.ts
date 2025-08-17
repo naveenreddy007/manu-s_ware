@@ -48,7 +48,16 @@ export async function signUp(prevState: any, formData: FormData) {
   const supabase = createActionClient()
 
   try {
-    const { error } = await supabase.auth.signUp({
+    console.log("[v0] Starting user signup process...")
+
+    // First, check if Supabase is properly configured
+    const { data: testData, error: testError } = await supabase.from("user_profiles").select("count").limit(1)
+    if (testError) {
+      console.log("[v0] Database connection test failed:", testError.message)
+      return { error: "Database connection failed. Please try again." }
+    }
+
+    const { data, error } = await supabase.auth.signUp({
       email: email.toString(),
       password: password.toString(),
       options: {
@@ -59,12 +68,70 @@ export async function signUp(prevState: any, formData: FormData) {
     })
 
     if (error) {
+      console.log("[v0] Auth signup error:", error.message)
+
+      // Provide more specific error messages
+      if (error.message.includes("User already registered")) {
+        return { error: "An account with this email already exists. Please sign in instead." }
+      }
+      if (error.message.includes("Password")) {
+        return { error: "Password must be at least 6 characters long." }
+      }
+      if (error.message.includes("Email")) {
+        return { error: "Please enter a valid email address." }
+      }
+
       return { error: error.message }
     }
 
+    if (data.user) {
+      console.log("[v0] User created successfully:", data.user.id)
+
+      // The database trigger should handle profile creation, but let's add a fallback
+      if (!data.user.email_confirmed_at) {
+        console.log("[v0] User needs email confirmation")
+
+        // Wait a moment for the trigger to execute
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+
+        // Check if profile was created by trigger
+        const { data: existingProfile } = await supabase
+          .from("user_profiles")
+          .select("id")
+          .eq("user_id", data.user.id)
+          .single()
+
+        if (!existingProfile) {
+          console.log("[v0] Creating user profile as fallback...")
+
+          try {
+            const { error: profileError } = await supabase.from("user_profiles").insert({
+              user_id: data.user.id,
+              role: "user",
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+
+            if (profileError) {
+              console.log("[v0] Fallback profile creation error:", profileError.message)
+              // Don't fail signup for profile creation issues
+            } else {
+              console.log("[v0] Fallback user profile created successfully")
+            }
+          } catch (profileError) {
+            console.log("[v0] Fallback profile creation exception:", profileError)
+            // Don't fail signup for profile creation issues
+          }
+        } else {
+          console.log("[v0] User profile already exists (created by trigger)")
+        }
+      }
+    }
+
+    console.log("[v0] Signup completed successfully")
     return { success: "Check your email to confirm your account." }
   } catch (error) {
-    console.error("Sign up error:", error)
+    console.error("[v0] Sign up error:", error)
     return { error: "An unexpected error occurred. Please try again." }
   }
 }

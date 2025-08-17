@@ -7,6 +7,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { ShoppingBag, Plus, Minus, X, CreditCard } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { formatCurrency } from "@/lib/utils/currency"
 
 interface CartItem {
   id: string
@@ -125,7 +126,7 @@ export function CartSidebar({ itemCount = 0 }: CartSidebarProps) {
                     <div className="flex-1 space-y-1">
                       <h4 className="font-medium text-sm text-foreground line-clamp-1">{item.product.name}</h4>
                       <p className="text-xs text-muted-foreground">Size: {item.size}</p>
-                      <p className="text-sm font-medium text-foreground">${item.product.price}</p>
+                      <p className="text-sm font-medium text-foreground">{formatCurrency(item.product.price)}</p>
 
                       <div className="flex items-center gap-2">
                         <Button
@@ -159,7 +160,7 @@ export function CartSidebar({ itemCount = 0 }: CartSidebarProps) {
               <div className="border-t border-border pt-4 space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-foreground">Total</span>
-                  <span className="text-xl font-bold text-foreground">${totalPrice.toFixed(2)}</span>
+                  <span className="text-xl font-bold text-foreground">{formatCurrency(totalPrice)}</span>
                 </div>
 
                 <Button

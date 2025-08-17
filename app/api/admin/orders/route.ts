@@ -1,36 +1,67 @@
 import { NextResponse } from "next/server"
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
-import { getUser, isAdmin } from "@/lib/auth-utils"
+import { createClient } from "@/lib/supabase/server"
+import { requireAdmin } from "@/lib/auth"
 
 export async function GET() {
   try {
-    const user = await getUser()
-    if (!user || !(await isAdmin(user.id))) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    console.log("[v0] Admin orders API called")
+    await requireAdmin()
+
+    const supabase = createClient()
+
+    const { data: orders, error: ordersError } = await supabase
+      .from("orders")
+      .select("*")
+      .order("created_at", { ascending: false })
+
+    if (ordersError) {
+      console.error("[v0] Error fetching orders:", ordersError)
+      return NextResponse.json({ error: ordersError.message }, { status: 500 })
     }
 
-    const cookieStore = cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    const { data: userProfiles, error: profilesError } = await supabase
+      .from("user_profiles")
+      .select("user_id, first_name, last_name, phone")
+
+    if (profilesError) {
+      console.error("[v0] Error fetching user profiles:", profilesError)
+      // Continue without profiles rather than failing completely
+    }
+
+    const ordersWithProfiles =
+      orders?.map((order) => {
+        const profile = userProfiles?.find((p) => p.user_id === order.user_id)
+        return {
+          ...order,
+          user_profiles: profile
+            ? {
+                first_name: profile.first_name || "",
+                last_name: profile.last_name || "",
+                phone: profile.phone || "",
+                email: `user-${order.user_id.slice(0, 8)}@example.com`, // Fallback email
+              }
+            : null,
+        }
+      }) || []
+
+    console.log("[v0] Successfully fetched", ordersWithProfiles.length, "orders")
+    return NextResponse.json(ordersWithProfiles, {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+      },
+    })
+  } catch (error: any) {
+    console.error("[v0] Error in orders API:", error)
+    return NextResponse.json(
+      { error: "Internal server error", details: error.message },
       {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
         },
       },
     )
-
-    const { data: orders, error } = await supabase.from("orders").select("*").order("created_at", { ascending: false })
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    return NextResponse.json(orders)
-  } catch (error) {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

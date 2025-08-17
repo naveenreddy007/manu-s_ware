@@ -247,21 +247,42 @@ export default function CreateInspirationPage() {
 
         const compressedFile = await compressImage(image.file)
         const fileExt = "jpg"
-        const fileName = `inspiration/${user.id}/${Date.now()}-${i}.${fileExt}`
+        const fileName = `${user.id}/${Date.now()}-${i}.${fileExt}`
 
         try {
+          const { data: buckets } = await supabase.storage.listBuckets()
+          const imagesBucket = buckets?.find((bucket) => bucket.name === "images")
+
+          if (!imagesBucket) {
+            console.log("[v0] Creating images bucket...")
+            const { error: bucketError } = await supabase.storage.createBucket("images", {
+              public: true,
+              allowedMimeTypes: ["image/*"],
+              fileSizeLimit: 5242880, // 5MB
+            })
+            if (bucketError) {
+              console.warn("[v0] Bucket creation warning:", bucketError.message)
+            }
+          }
+
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from("images")
-            .upload(fileName, compressedFile)
+            .upload(fileName, compressedFile, {
+              cacheControl: "3600",
+              upsert: false,
+            })
 
-          if (uploadError) throw uploadError
+          if (uploadError) {
+            console.error("[v0] Upload error details:", uploadError)
+            throw uploadError
+          }
 
           const {
             data: { publicUrl },
           } = supabase.storage.from("images").getPublicUrl(fileName)
 
           uploadedImages.push(publicUrl)
-          console.log(`[v0] Image ${i + 1} uploaded successfully`)
+          console.log(`[v0] Image ${i + 1} uploaded successfully to:`, publicUrl)
         } catch (uploadError: any) {
           console.error("[v0] Upload error:", uploadError)
           throw new Error(`Failed to upload image ${i + 1}: ${uploadError.message}`)
@@ -296,14 +317,15 @@ export default function CreateInspirationPage() {
           product_id: null,
           position_x: 0,
           position_y: 0,
-          item_type: "image",
           image_url: imageUrl,
+          item_type: "image",
         }))
 
         const { error: itemsError } = await supabase.from("outfit_inspiration_items").insert(additionalImageItems)
 
         if (itemsError) {
           console.error("[v0] Additional images error:", itemsError)
+          // Don't throw error for additional images, just log it
         } else {
           console.log("[v0] Additional images stored successfully")
         }
@@ -324,6 +346,7 @@ export default function CreateInspirationPage() {
 
         if (tagsError) {
           console.error("[v0] Tags error:", tagsError)
+          // Don't throw error for tags, just log it
         } else {
           console.log("[v0] Product tags added successfully")
         }

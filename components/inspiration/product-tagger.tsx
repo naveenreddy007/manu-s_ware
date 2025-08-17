@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Search, Plus, X, Tag } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { formatPrice } from "@/lib/utils/currency"
 
 interface Product {
   id: string
@@ -103,13 +104,6 @@ export function ProductTagger({ imageUrl, tags, onTagsChange, isEditing = false 
 
   const handleRemoveTag = (tagId: string) => {
     onTagsChange(tags.filter((tag) => tag.id !== tagId))
-  }
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(price)
   }
 
   return (

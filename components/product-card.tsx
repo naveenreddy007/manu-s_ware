@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import { formatPrice } from "@/lib/utils/currency"
 
 import Link from "next/link"
 import { useState } from "react"
@@ -116,7 +117,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
 
         <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <p className="text-lg font-semibold text-card-foreground">${product.price}</p>
+            <p className="text-lg font-semibold text-card-foreground">{formatPrice(product.price)}</p>
             <div className="flex gap-1">
               {product.tags?.slice(0, 2).map((tag) => (
                 <Badge key={tag} variant="outline" className="text-xs">
