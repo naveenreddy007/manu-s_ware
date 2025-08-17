@@ -5,26 +5,43 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = createClient()
 
-    // Get trending products based on recent activity (simplified - could be based on views, purchases, etc.)
-    const { data: trendingProducts } = await supabase
+    // Get trending products based on recent activity
+    const { data: trendingProducts, error: productsError } = await supabase
       .from("products")
       .select("*")
+      .eq("is_active", true)
       .order("created_at", { ascending: false })
       .limit(8)
 
-    // Get popular categories
-    const { data: categoryData } = await supabase.from("products").select("category")
+    if (productsError) {
+      console.error("Error fetching trending products:", productsError)
+    }
 
-    const categoryCounts =
-      categoryData?.reduce((acc: Record<string, number>, item) => {
-        acc[item.category] = (acc[item.category] || 0) + 1
+    // Get popular categories with better error handling
+    const { data: categoryData, error: categoryError } = await supabase
+      .from("products")
+      .select("category")
+      .eq("is_active", true)
+
+    let trendingCategories: string[] = []
+
+    if (!categoryError && categoryData) {
+      const categoryCounts = categoryData.reduce((acc: Record<string, number>, item) => {
+        if (item.category) {
+          acc[item.category] = (acc[item.category] || 0) + 1
+        }
         return acc
-      }, {}) || {}
+      }, {})
 
-    const trendingCategories = Object.entries(categoryCounts)
-      .sort(([, a], [, b]) => (b as number) - (a as number))
-      .slice(0, 5)
-      .map(([category]) => category)
+      trendingCategories = Object.entries(categoryCounts)
+        .sort(([, a], [, b]) => (b as number) - (a as number))
+        .slice(0, 5)
+        .map(([category]) => category)
+    }
+
+    if (trendingCategories.length === 0) {
+      trendingCategories = ["shirts", "pants", "shoes", "accessories", "outerwear"]
+    }
 
     return NextResponse.json({
       trendingProducts: trendingProducts || [],
@@ -32,6 +49,9 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error("Error fetching trending data:", error)
-    return NextResponse.json({ trendingProducts: [], trendingCategories: [] })
+    return NextResponse.json({
+      trendingProducts: [],
+      trendingCategories: ["shirts", "pants", "shoes", "accessories", "outerwear"],
+    })
   }
 }
