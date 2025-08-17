@@ -30,17 +30,21 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     const { data: reviews, error } = await supabase
       .from("product_reviews")
-      .select(`
-        *,
-        user:auth.users!inner(id, email)
-      `)
+      .select("*")
       .eq("product_id", params.id)
       .order(orderBy.column, { ascending: orderBy.ascending })
       .range(offset, offset + limit - 1)
 
     if (error) {
+      console.error("Reviews fetch error:", error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    const userIds = reviews?.map((review) => review.user_id) || []
+    const { data: userProfiles } = await supabase
+      .from("user_profiles")
+      .select("user_id, first_name, last_name")
+      .in("user_id", userIds)
 
     // Get review statistics
     const { data: stats } = await supabase.from("product_reviews").select("rating").eq("product_id", params.id)
@@ -55,14 +59,18 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     return NextResponse.json({
       reviews:
-        reviews?.map((review) => ({
-          ...review,
-          user: {
-            id: review.user.id,
-            email: review.user.email,
-            name: review.user.email?.split("@")[0] || "Anonymous",
-          },
-        })) || [],
+        reviews?.map((review) => {
+          const userProfile = userProfiles?.find((profile) => profile.user_id === review.user_id)
+          return {
+            ...review,
+            user: {
+              id: review.user_id,
+              name: userProfile
+                ? `${userProfile.first_name || ""} ${userProfile.last_name || ""}`.trim() || "Anonymous"
+                : "Anonymous",
+            },
+          }
+        }) || [],
       pagination: {
         page,
         limit,
@@ -76,6 +84,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       },
     })
   } catch (error) {
+    console.error("Reviews API error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
@@ -121,30 +130,36 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         comment,
         verified_purchase: verifiedPurchase,
       })
-      .select(`
-        *,
-        user:auth.users!inner(id, email)
-      `)
+      .select("*")
       .single()
 
     if (error) {
+      console.error("Review insert error:", error)
       if (error.code === "23505") {
         return NextResponse.json({ error: "You have already reviewed this product" }, { status: 409 })
       }
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    const { data: userProfile } = await supabase
+      .from("user_profiles")
+      .select("first_name, last_name")
+      .eq("user_id", user.id)
+      .single()
+
     return NextResponse.json({
       review: {
         ...review,
         user: {
-          id: review.user.id,
-          email: review.user.email,
-          name: review.user.email?.split("@")[0] || "Anonymous",
+          id: user.id,
+          name: userProfile
+            ? `${userProfile.first_name || ""} ${userProfile.last_name || ""}`.trim() || "Anonymous"
+            : "Anonymous",
         },
       },
     })
   } catch (error) {
+    console.error("Review submission error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

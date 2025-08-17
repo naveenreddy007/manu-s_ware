@@ -62,10 +62,18 @@ export function AdvancedSearch({ searchQuery, onSearchChange, className }: Advan
   const fetchTrendingData = async () => {
     try {
       const response = await fetch("/api/search/trending")
-      const data = await response.json()
-      setTrendingSearches(data.trendingCategories || [])
+      if (response.ok) {
+        const data = await response.json()
+        setTrendingSearches(data.trendingCategories || [])
+      } else {
+        console.warn("Failed to fetch trending data, using fallback")
+        // Provide fallback trending categories
+        setTrendingSearches(["shirts", "pants", "shoes", "accessories", "outerwear"])
+      }
     } catch (error) {
       console.error("Error fetching trending data:", error)
+      // Provide fallback trending categories
+      setTrendingSearches(["shirts", "pants", "shoes", "accessories", "outerwear"])
     }
   }
 
