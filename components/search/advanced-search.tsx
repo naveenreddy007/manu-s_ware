@@ -61,17 +61,33 @@ export function AdvancedSearch({ searchQuery, onSearchChange, className }: Advan
 
   const fetchTrendingData = async () => {
     try {
-      const response = await fetch("/api/search/trending")
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
+
+      const response = await fetch("/api/search/trending", {
+        signal: controller.signal,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+
+      clearTimeout(timeoutId)
+
       if (response.ok) {
         const data = await response.json()
         setTrendingSearches(data.trendingCategories || [])
+        console.log("[v0] Successfully fetched trending data:", data.trendingCategories?.length || 0, "categories")
       } else {
-        console.warn("Failed to fetch trending data, using fallback")
+        console.warn("[v0] Trending API returned non-OK status:", response.status)
         // Provide fallback trending categories
         setTrendingSearches(["shirts", "pants", "shoes", "accessories", "outerwear"])
       }
     } catch (error) {
-      console.error("Error fetching trending data:", error)
+      if (error instanceof Error && error.name === "AbortError") {
+        console.warn("[v0] Trending data fetch timed out, using fallback")
+      } else {
+        console.error("[v0] Error fetching trending data:", error)
+      }
       // Provide fallback trending categories
       setTrendingSearches(["shirts", "pants", "shoes", "accessories", "outerwear"])
     }

@@ -1,8 +1,6 @@
 "use server"
-
-import { createServerActionClient } from "@supabase/auth-helpers-nextjs"
-import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
+import { createActionClient } from "@/lib/supabase/server"
 
 export async function signIn(prevState: any, formData: FormData) {
   if (!formData) {
@@ -16,8 +14,7 @@ export async function signIn(prevState: any, formData: FormData) {
     return { error: "Email and password are required" }
   }
 
-  const cookieStore = cookies()
-  const supabase = createServerActionClient({ cookies: () => cookieStore })
+  const supabase = createActionClient()
 
   try {
     const { error } = await supabase.auth.signInWithPassword({
@@ -48,8 +45,7 @@ export async function signUp(prevState: any, formData: FormData) {
     return { error: "Email and password are required" }
   }
 
-  const cookieStore = cookies()
-  const supabase = createServerActionClient({ cookies: () => cookieStore })
+  const supabase = createActionClient()
 
   try {
     const { error } = await supabase.auth.signUp({
@@ -74,9 +70,54 @@ export async function signUp(prevState: any, formData: FormData) {
 }
 
 export async function signOut() {
-  const cookieStore = cookies()
-  const supabase = createServerActionClient({ cookies: () => cookieStore })
+  const supabase = createActionClient()
 
   await supabase.auth.signOut()
   redirect("/")
+}
+
+export async function updateUserRole(prevState: any, formData: FormData) {
+  const userId = formData.get("userId")
+  const role = formData.get("role")
+
+  if (!userId || !role) {
+    return { error: "User ID and role are required" }
+  }
+
+  const supabase = createActionClient()
+
+  try {
+    // Check if current user is admin
+    const {
+      data: { user: currentUser },
+    } = await supabase.auth.getUser()
+    if (!currentUser) {
+      return { error: "Not authenticated" }
+    }
+
+    const { data: currentProfile } = await supabase
+      .from("user_profiles")
+      .select("role")
+      .eq("user_id", currentUser.id)
+      .single()
+
+    if (currentProfile?.role !== "admin") {
+      return { error: "Not authorized" }
+    }
+
+    // Update user role
+    const { error } = await supabase
+      .from("user_profiles")
+      .update({ role: role.toString() })
+      .eq("user_id", userId.toString())
+
+    if (error) {
+      return { error: error.message }
+    }
+
+    return { success: "User role updated successfully" }
+  } catch (error) {
+    console.error("Update role error:", error)
+    return { error: "An unexpected error occurred" }
+  }
 }

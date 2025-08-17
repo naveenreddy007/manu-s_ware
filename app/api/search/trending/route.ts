@@ -6,6 +6,17 @@ export async function GET(request: NextRequest) {
     console.log("[v0] Search trending API called")
     const supabase = createClient()
 
+    const { data: connectionTest, error: connectionError } = await supabase
+      .from("products")
+      .select("count")
+      .limit(1)
+      .single()
+
+    if (connectionError) {
+      console.error("[v0] Supabase connection error:", connectionError)
+      throw new Error("Database connection failed")
+    }
+
     // Get trending products based on recent activity
     const { data: trendingProducts, error: productsError } = await supabase
       .from("products")
@@ -67,8 +78,11 @@ export async function GET(request: NextRequest) {
       {
         trendingProducts: [],
         trendingCategories: ["shirts", "pants", "shoes", "accessories", "outerwear"],
+        error: "Using fallback data due to server error",
+        timestamp: new Date().toISOString(),
       },
       {
+        status: 200,
         headers: {
           "Content-Type": "application/json",
         },

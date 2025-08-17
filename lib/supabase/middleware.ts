@@ -1,4 +1,4 @@
-import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs"
+import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
 // Check if Supabase environment variables are available
@@ -16,10 +16,28 @@ export async function updateSession(request: NextRequest) {
     })
   }
 
-  const res = NextResponse.next()
+  let supabaseResponse = NextResponse.next({
+    request,
+  })
 
-  // Create a Supabase client configured to use cookies
-  const supabase = createMiddlewareClient({ req: request, res })
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({
+            request,
+          })
+          cookiesToSet.forEach(({ name, value, options }) => supabaseResponse.cookies.set(name, value, options))
+        },
+      },
+    },
+  )
 
   // Check if this is an auth callback
   const requestUrl = new URL(request.url)
@@ -33,7 +51,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Refresh session if expired - required for Server Components
-  await supabase.auth.getSession()
+  await supabase.auth.getUser()
 
   // Protected routes - redirect to login if not authenticated
   const isAuthRoute =
@@ -46,20 +64,22 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/products") ||
     request.nextUrl.pathname.startsWith("/api/products") ||
     request.nextUrl.pathname.startsWith("/api/categories") ||
+    request.nextUrl.pathname.startsWith("/api/trending") ||
+    request.nextUrl.pathname.startsWith("/api/search") ||
     request.nextUrl.pathname.startsWith("/_next") ||
     request.nextUrl.pathname.startsWith("/favicon")
 
   if (!isAuthRoute && !isPublicRoute) {
     const {
-      data: { session },
-    } = await supabase.auth.getSession()
+      data: { user },
+    } = await supabase.auth.getUser()
 
-    if (!session) {
+    if (!user) {
       const redirectUrl = new URL("/auth/login", request.url)
       redirectUrl.searchParams.set("redirectTo", request.nextUrl.pathname)
       return NextResponse.redirect(redirectUrl)
     }
   }
 
-  return res
+  return supabaseResponse
 }

@@ -4,13 +4,20 @@ import { useState, useEffect } from "react"
 import { ProductFilters } from "@/components/product-filters"
 import { CartSidebar } from "@/components/cart/cart-sidebar"
 import { Button } from "@/components/ui/button"
-import { User, Menu, LogOut, Sparkles, Heart, Palette, Settings } from "lucide-react"
+import { User, Menu, LogOut, Sparkles, Heart, Palette, Settings, Shield, BarChart3, Package, Users } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { signOut } from "@/lib/actions"
 import Link from "next/link"
 import { AdvancedSearch } from "@/components/search/advanced-search"
 import { SearchResults } from "@/components/search/search-results"
 import type { Product, Category } from "@/lib/types/database"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([])
@@ -160,11 +167,60 @@ export default function HomePage() {
                     </Link>
                   </Button>
                   {isAdmin && (
-                    <Button variant="ghost" size="icon" asChild>
-                      <Link href="/admin">
-                        <Settings className="h-5 w-5" />
-                      </Link>
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="relative bg-primary/10 hover:bg-primary/20 text-primary"
+                        >
+                          <Shield className="h-5 w-5" />
+                          <span className="absolute -top-1 -right-1 h-3 w-3 bg-primary rounded-full flex items-center justify-center">
+                            <span className="text-[8px] text-primary-foreground font-bold">A</span>
+                          </span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem asChild>
+                          <Link href="/admin" className="flex items-center gap-2">
+                            <BarChart3 className="h-4 w-4" />
+                            Admin Dashboard
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href="/admin#products" className="flex items-center gap-2">
+                            <Package className="h-4 w-4" />
+                            Manage Products
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href="/admin#orders" className="flex items-center gap-2">
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                              />
+                            </svg>
+                            Manage Orders
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href="/admin#users" className="flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            User Management
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild>
+                          <Link href="/admin#settings" className="flex items-center gap-2">
+                            <Settings className="h-4 w-4" />
+                            Admin Settings
+                          </Link>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   )}
                   <Button variant="ghost" size="icon" asChild>
                     <Link href="/profile">

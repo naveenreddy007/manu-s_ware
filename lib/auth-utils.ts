@@ -40,7 +40,7 @@ export async function getUserProfile(userId: string) {
   return profile
 }
 
-export async function isAdmin(userId: string) {
+export async function isAdmin(userId?: string) {
   const cookieStore = cookies()
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -54,8 +54,17 @@ export async function isAdmin(userId: string) {
     },
   )
 
+  let targetUserId = userId
+  if (!targetUserId) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return false
+    targetUserId = user.id
+  }
+
   // Check user profile table first
-  const profile = await getUserProfile(userId)
+  const profile = await getUserProfile(targetUserId)
   if (profile?.role === "admin") {
     return true
   }
