@@ -53,8 +53,6 @@ export function InspirationFeed() {
             product_id,
             position_x,
             position_y,
-            item_type,
-            image_url,
             products (
               id,
               name,
@@ -87,20 +85,14 @@ export function InspirationFeed() {
 
       const transformedPosts =
         inspirationData?.map((post) => {
-          const additionalImages =
-            post.outfit_inspiration_items
-              ?.filter((item: any) => item.item_type === "image" && item.image_url)
-              .map((item: any) => item.image_url) || []
-
-          const productItems =
-            post.outfit_inspiration_items?.filter((item: any) => item.item_type === "product" && item.product_id) || []
+          const productItems = post.outfit_inspiration_items || []
 
           return {
             id: post.id,
             title: post.title,
             description: post.description || "",
             image_url: post.image_url,
-            additional_images: additionalImages,
+            additional_images: [], // No additional images stored in outfit_inspiration_items
             user_id: post.user_id,
             created_at: post.created_at,
             creator_name: userProfileMap.get(post.user_id) || "Anonymous User",
@@ -112,7 +104,7 @@ export function InspirationFeed() {
               product_price: item.products?.price || 0,
               position_x: item.position_x,
               position_y: item.position_y,
-              image_index: 0,
+              image_index: 0, // All tags are on the main image
             })),
           }
         }) || []
