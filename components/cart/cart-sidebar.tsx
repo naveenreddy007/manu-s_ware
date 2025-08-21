@@ -30,11 +30,25 @@ export function CartSidebar({ itemCount = 0 }: CartSidebarProps) {
   const [items, setItems] = useState<CartItem[]>([])
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
+  const [totalItems, setTotalItems] = useState(0)
 
   useEffect(() => {
     if (open) {
       fetchCartItems()
     }
+  }, [open])
+
+  useEffect(() => {
+    const handleCartUpdate = () => {
+      if (open) {
+        fetchCartItems()
+      } else {
+        fetchCartCount()
+      }
+    }
+
+    window.addEventListener("cartUpdated", handleCartUpdate)
+    return () => window.removeEventListener("cartUpdated", handleCartUpdate)
   }, [open])
 
   const fetchCartItems = async () => {
@@ -44,11 +58,25 @@ export function CartSidebar({ itemCount = 0 }: CartSidebarProps) {
       if (response.ok) {
         const data = await response.json()
         setItems(data.items || [])
+        const count = data.items?.reduce((sum: number, item: CartItem) => sum + item.quantity, 0) || 0
+        setTotalItems(count)
       }
     } catch (error) {
       console.error("Failed to fetch cart items:", error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchCartCount = async () => {
+    try {
+      const response = await fetch("/api/cart/count")
+      if (response.ok) {
+        const data = await response.json()
+        setTotalItems(data.count)
+      }
+    } catch (error) {
+      console.error("Failed to fetch cart count:", error)
     }
   }
 
@@ -63,10 +91,16 @@ export function CartSidebar({ itemCount = 0 }: CartSidebarProps) {
       if (response.ok) {
         if (newQuantity <= 0) {
           setItems(items.filter((item) => item.id !== itemId))
+          setTotalItems((prev) => prev - items.find((item) => item.id === itemId)?.quantity || 0)
         } else {
           const data = await response.json()
+          const oldQuantity = items.find((item) => item.id === itemId)?.quantity || 0
           setItems(items.map((item) => (item.id === itemId ? data.item : item)))
+          setTotalItems((prev) => prev - oldQuantity + newQuantity)
         }
+
+        // Trigger cart update event
+        window.dispatchEvent(new CustomEvent("cartUpdated"))
       }
     } catch (error) {
       console.error("Failed to update cart item:", error)
@@ -74,7 +108,6 @@ export function CartSidebar({ itemCount = 0 }: CartSidebarProps) {
   }
 
   const totalPrice = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
-  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0)
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>

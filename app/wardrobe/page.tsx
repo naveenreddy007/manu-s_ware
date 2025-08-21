@@ -4,6 +4,8 @@ import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { WardrobeItemCard } from "@/components/wardrobe/wardrobe-item-card"
 import { AddItemDialog } from "@/components/wardrobe/add-item-dialog"
+import { EditItemDialog } from "@/components/wardrobe/edit-item-dialog"
+import { CameraUploadDialog } from "@/components/wardrobe/camera-upload-dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Filter, Grid, List } from "lucide-react"
@@ -18,6 +20,7 @@ export default function WardrobePage() {
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
+  const [editingItem, setEditingItem] = useState<WardrobeItem | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -80,6 +83,33 @@ export default function WardrobePage() {
     setItems([newItem, ...items])
   }
 
+  const handleEditItem = (item: WardrobeItem) => {
+    setEditingItem(item)
+  }
+
+  const handleUpdateItem = (updatedItem: WardrobeItem) => {
+    setItems(items.map((item) => (item.id === updatedItem.id ? updatedItem : item)))
+    setEditingItem(null)
+  }
+
+  const handleDeleteItem = async (item: WardrobeItem) => {
+    if (!confirm(`Are you sure you want to delete "${item.name}"?`)) return
+
+    try {
+      const response = await fetch(`/api/wardrobe/${item.id}`, {
+        method: "DELETE",
+      })
+
+      if (response.ok) {
+        setItems(items.filter((i) => i.id !== item.id))
+      } else {
+        console.error("Failed to delete item")
+      }
+    } catch (error) {
+      console.error("Failed to delete item:", error)
+    }
+  }
+
   const mainCategories = categories.filter((cat) => !cat.parent_category)
 
   if (!user) {
@@ -123,6 +153,9 @@ export default function WardrobePage() {
                   <List className="h-4 w-4" />
                 </Button>
               </div>
+
+              <CameraUploadDialog onAdd={handleAddItem} categories={mainCategories.map((cat) => cat.name)} />
+
               <AddItemDialog onAdd={handleAddItem} categories={mainCategories.map((cat) => cat.name)} />
             </div>
           </div>
@@ -188,7 +221,7 @@ export default function WardrobePage() {
             }
           >
             {items.map((item) => (
-              <WardrobeItemCard key={item.id} item={item} />
+              <WardrobeItemCard key={item.id} item={item} onEdit={handleEditItem} onDelete={handleDeleteItem} />
             ))}
           </div>
         ) : (
@@ -198,10 +231,22 @@ export default function WardrobePage() {
                 ? "Your wardrobe is empty. Start by adding your first item!"
                 : `No ${selectedCategory} items found.`}
             </p>
-            <AddItemDialog onAdd={handleAddItem} categories={mainCategories.map((cat) => cat.name)} />
+            <div className="flex gap-2 justify-center">
+              <CameraUploadDialog onAdd={handleAddItem} categories={mainCategories.map((cat) => cat.name)} />
+              <AddItemDialog onAdd={handleAddItem} categories={mainCategories.map((cat) => cat.name)} />
+            </div>
           </div>
         )}
       </main>
+
+      {editingItem && (
+        <EditItemDialog
+          item={editingItem}
+          categories={mainCategories.map((cat) => cat.name)}
+          onUpdate={handleUpdateItem}
+          onClose={() => setEditingItem(null)}
+        />
+      )}
     </div>
   )
 }

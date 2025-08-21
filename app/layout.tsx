@@ -1,6 +1,7 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { Montserrat, Open_Sans } from "next/font/google"
+import { MobileLayoutWrapper } from "@/components/navigation/mobile-layout-wrapper"
 import "./globals.css"
 
 const montserrat = Montserrat({
@@ -37,8 +38,15 @@ html {
   --font-body: ${openSans.style.fontFamily};
 }
         `}</style>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+        <meta name="theme-color" content="#000000" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="MANUS" />
       </head>
-      <body>{children}</body>
+      <body>
+        <MobileLayoutWrapper>{children}</MobileLayoutWrapper>
+      </body>
     </html>
   )
 }

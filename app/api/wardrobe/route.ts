@@ -61,6 +61,7 @@ export async function POST(request: Request) {
       image_url,
       tags: tags || [],
       notes,
+      source: "manual",
     })
     .select()
     .single()

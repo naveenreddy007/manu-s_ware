@@ -1,9 +1,12 @@
+"use client"
+
 import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ShoppingBag, Sparkles } from "lucide-react"
 import type { Product, WardrobeItem } from "@/lib/types/database"
+import { useCurrency } from "@/hooks/useCurrency"
 
 interface ProductRecommendationCardProps {
   product: Product
@@ -18,11 +21,24 @@ export function ProductRecommendationCard({
   confidence_score,
   complements,
 }: ProductRecommendationCardProps) {
+  const { formatCurrency } = useCurrency()
   const confidenceLevel = confidence_score > 0.8 ? "high" : confidence_score > 0.6 ? "medium" : "low"
   const confidenceColor = {
     high: "bg-accent text-accent-foreground",
     medium: "bg-secondary text-secondary-foreground",
     low: "bg-muted text-muted-foreground",
+  }
+
+  const handleAddToCart = () => {
+    window.dispatchEvent(
+      new CustomEvent("addToCart", {
+        detail: { productId: product.id, quantity: 1 },
+      }),
+    )
+  }
+
+  const handleViewDetails = () => {
+    window.location.href = `/products/${product.id}`
   }
 
   return (
@@ -48,7 +64,7 @@ export function ProductRecommendationCard({
         </div>
 
         <div className="space-y-2">
-          <p className="text-lg font-semibold text-card-foreground">${product.price}</p>
+          <p className="text-lg font-semibold text-card-foreground">{formatCurrency(product.price)}</p>
 
           {complements.length > 0 && (
             <div className="space-y-1">
@@ -70,10 +86,10 @@ export function ProductRecommendationCard({
         </div>
 
         <div className="flex gap-2 pt-2">
-          <Button size="sm" variant="outline" className="flex-1 bg-transparent">
+          <Button size="sm" variant="outline" className="flex-1 bg-transparent" onClick={handleViewDetails}>
             View Details
           </Button>
-          <Button size="sm" className="flex-1 bg-primary hover:bg-primary/90">
+          <Button size="sm" className="flex-1 bg-primary hover:bg-primary/90" onClick={handleAddToCart}>
             <ShoppingBag className="h-4 w-4 mr-1" />
             Add to Cart
           </Button>

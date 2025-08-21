@@ -188,3 +188,36 @@ export async function updateUserRole(prevState: any, formData: FormData) {
     return { error: "An unexpected error occurred" }
   }
 }
+
+export async function signInWithGoogle() {
+  const supabase = createActionClient()
+
+  try {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo:
+          process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
+          `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/wardrobe`,
+        queryParams: {
+          access_type: "offline",
+          prompt: "consent",
+        },
+      },
+    })
+
+    if (error) {
+      console.log("[v0] Google OAuth error:", error.message)
+      return { error: error.message }
+    }
+
+    if (data.url) {
+      redirect(data.url)
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error("[v0] Google sign-in error:", error)
+    return { error: "Failed to sign in with Google. Please try again." }
+  }
+}

@@ -23,10 +23,24 @@ interface ProfileData {
   size_shirt?: string
   size_pants?: string
   size_shoes?: string
+  size_dress?: string
+  size_bra?: string
+  size_waist?: string
+  body_type?: string
+  height?: string
+  weight?: string
+  budget_range?: string
+  favorite_brands?: string[]
+  color_preferences?: string[]
+  style_goals?: string
+  shopping_frequency?: string
+  fit_preference?: string
   notification_preferences?: {
     email_recommendations: boolean
     email_promotions: boolean
     push_notifications: boolean
+    sms_notifications: boolean
+    order_updates: boolean
   }
 }
 
@@ -222,17 +236,71 @@ export function ProfileForm() {
         </CardContent>
       </Card>
 
-      {/* Size Information */}
+      {/* Enhanced Size & Fit Information */}
       <Card>
         <CardHeader>
-          <CardTitle>Size Information</CardTitle>
-          <CardDescription>Help us recommend the right sizes</CardDescription>
+          <CardTitle>Size & Fit Information</CardTitle>
+          <CardDescription>Help us recommend the perfect fit for you</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="size-shirt">Shirt Size</Label>
+              <Label htmlFor="height">Height (cm)</Label>
+              <Input
+                id="height"
+                placeholder="e.g., 165"
+                value={profile.height || ""}
+                onChange={(e) => updateProfile("height", e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="weight">Weight (kg)</Label>
+              <Input
+                id="weight"
+                placeholder="e.g., 60"
+                value={profile.weight || ""}
+                onChange={(e) => updateProfile("weight", e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="body-type">Body Type</Label>
+            <Select value={profile.body_type || ""} onValueChange={(value) => updateProfile("body_type", value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select your body type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pear">Pear</SelectItem>
+                <SelectItem value="apple">Apple</SelectItem>
+                <SelectItem value="hourglass">Hourglass</SelectItem>
+                <SelectItem value="rectangle">Rectangle</SelectItem>
+                <SelectItem value="inverted-triangle">Inverted Triangle</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="size-shirt">Shirt/Top Size</Label>
               <Select value={profile.size_shirt || ""} onValueChange={(value) => updateProfile("size_shirt", value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select size" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="XS">XS</SelectItem>
+                  <SelectItem value="S">S</SelectItem>
+                  <SelectItem value="M">M</SelectItem>
+                  <SelectItem value="L">L</SelectItem>
+                  <SelectItem value="XL">XL</SelectItem>
+                  <SelectItem value="XXL">XXL</SelectItem>
+                  <SelectItem value="XXXL">XXXL</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="size-dress">Dress Size</Label>
+              <Select value={profile.size_dress || ""} onValueChange={(value) => updateProfile("size_dress", value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select size" />
                 </SelectTrigger>
@@ -246,6 +314,9 @@ export function ProfileForm() {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <Label htmlFor="size-pants">Pants Size</Label>
               <Input
@@ -256,19 +327,105 @@ export function ProfileForm() {
               />
             </div>
             <div>
+              <Label htmlFor="size-waist">Waist (inches)</Label>
+              <Input
+                id="size-waist"
+                placeholder="e.g., 28"
+                value={profile.size_waist || ""}
+                onChange={(e) => updateProfile("size_waist", e.target.value)}
+              />
+            </div>
+            <div>
               <Label htmlFor="size-shoes">Shoe Size</Label>
               <Input
                 id="size-shoes"
-                placeholder="e.g., 10.5"
+                placeholder="e.g., 7.5"
                 value={profile.size_shoes || ""}
                 onChange={(e) => updateProfile("size_shoes", e.target.value)}
               />
             </div>
           </div>
+
+          <div>
+            <Label htmlFor="fit-preference">Fit Preference</Label>
+            <Select
+              value={profile.fit_preference || ""}
+              onValueChange={(value) => updateProfile("fit_preference", value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="How do you prefer your clothes to fit?" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="tight">Tight/Form-fitting</SelectItem>
+                <SelectItem value="fitted">Fitted</SelectItem>
+                <SelectItem value="regular">Regular</SelectItem>
+                <SelectItem value="loose">Loose/Relaxed</SelectItem>
+                <SelectItem value="oversized">Oversized</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Notification Preferences */}
+      {/* Shopping Preferences */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Shopping Preferences</CardTitle>
+          <CardDescription>Tell us about your style and shopping habits</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="budget-range">Budget Range</Label>
+              <Select
+                value={profile.budget_range || ""}
+                onValueChange={(value) => updateProfile("budget_range", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select your budget range" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="under-1000">Under ₹1,000</SelectItem>
+                  <SelectItem value="1000-3000">₹1,000 - ₹3,000</SelectItem>
+                  <SelectItem value="3000-5000">₹3,000 - ₹5,000</SelectItem>
+                  <SelectItem value="5000-10000">₹5,000 - ₹10,000</SelectItem>
+                  <SelectItem value="above-10000">Above ₹10,000</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="shopping-frequency">Shopping Frequency</Label>
+              <Select
+                value={profile.shopping_frequency || ""}
+                onValueChange={(value) => updateProfile("shopping_frequency", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="How often do you shop?" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="weekly">Weekly</SelectItem>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="quarterly">Quarterly</SelectItem>
+                  <SelectItem value="seasonally">Seasonally</SelectItem>
+                  <SelectItem value="rarely">Rarely</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="style-goals">Style Goals</Label>
+            <Input
+              id="style-goals"
+              placeholder="e.g., Build a capsule wardrobe, Find work outfits, Explore new styles"
+              value={profile.style_goals || ""}
+              onChange={(e) => updateProfile("style_goals", e.target.value)}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Enhanced Notification Preferences */}
       <Card>
         <CardHeader>
           <CardTitle>Notification Preferences</CardTitle>
@@ -283,6 +440,32 @@ export function ProfileForm() {
             <Switch
               checked={profile.notification_preferences?.email_recommendations ?? true}
               onCheckedChange={(checked) => updateNotificationPreference("email_recommendations", checked)}
+            />
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Order Updates</Label>
+              <p className="text-sm text-muted-foreground">Get notified about your order status and delivery updates</p>
+            </div>
+            <Switch
+              checked={profile.notification_preferences?.order_updates ?? true}
+              onCheckedChange={(checked) => updateNotificationPreference("order_updates", checked)}
+            />
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>SMS Notifications</Label>
+              <p className="text-sm text-muted-foreground">Receive important updates via SMS</p>
+            </div>
+            <Switch
+              checked={profile.notification_preferences?.sms_notifications ?? false}
+              onCheckedChange={(checked) => updateNotificationPreference("sms_notifications", checked)}
             />
           </div>
 
@@ -314,6 +497,25 @@ export function ProfileForm() {
               checked={profile.notification_preferences?.push_notifications ?? true}
               onCheckedChange={(checked) => updateNotificationPreference("push_notifications", checked)}
             />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Address Management */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Address Management</CardTitle>
+          <CardDescription>Manage your shipping and billing addresses</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>My Addresses</Label>
+              <p className="text-sm text-muted-foreground">Manage your saved addresses for faster checkout</p>
+            </div>
+            <Button variant="outline" asChild>
+              <Link href="/addresses">Manage Addresses</Link>
+            </Button>
           </div>
         </CardContent>
       </Card>

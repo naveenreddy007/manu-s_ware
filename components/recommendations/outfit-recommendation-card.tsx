@@ -1,9 +1,12 @@
+"use client"
+
 import Image from "next/image"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Sparkles, ShoppingBag, Eye } from "lucide-react"
 import type { WardrobeItem, Product } from "@/lib/types/database"
+import { useCurrency } from "@/hooks/useCurrency"
 
 interface OutfitRecommendationProps {
   id: string
@@ -23,11 +26,26 @@ export function OutfitRecommendationCard({
   recommended_products,
   styling_notes,
 }: OutfitRecommendationProps) {
+  const { formatCurrency } = useCurrency()
   const confidenceLevel = confidence_score > 0.8 ? "high" : confidence_score > 0.6 ? "medium" : "low"
   const confidenceColor = {
     high: "bg-accent text-accent-foreground",
     medium: "bg-secondary text-secondary-foreground",
     low: "bg-muted text-muted-foreground",
+  }
+
+  const totalPrice = recommended_products.reduce((sum, product) => sum + product.price, 0)
+
+  const handleShopItems = () => {
+    // Add recommended products to cart
+    recommended_products.forEach((product) => {
+      // Dispatch custom event to add to cart
+      window.dispatchEvent(
+        new CustomEvent("addToCart", {
+          detail: { productId: product.id, quantity: 1 },
+        }),
+      )
+    })
   }
 
   return (
@@ -79,26 +97,29 @@ export function OutfitRecommendationCard({
         {/* Styling Notes */}
         <p className="text-sm text-muted-foreground">{styling_notes}</p>
 
-        {/* Recommended Products List */}
+        {/* Enhanced Recommended Products List */}
         <div className="space-y-2">
-          <h4 className="text-sm font-medium text-card-foreground">Recommended additions:</h4>
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-medium text-card-foreground">Recommended additions:</h4>
+            <span className="text-sm font-bold text-primary">{formatCurrency(totalPrice)}</span>
+          </div>
           {recommended_products.map((product) => (
             <div key={product.id} className="flex items-center justify-between text-sm">
-              <span className="text-foreground">{product.name}</span>
-              <span className="font-medium text-card-foreground">${product.price}</span>
+              <span className="text-foreground truncate flex-1">{product.name}</span>
+              <span className="font-medium text-card-foreground ml-2">{formatCurrency(product.price)}</span>
             </div>
           ))}
         </div>
 
-        {/* Actions */}
+        {/* Enhanced Actions */}
         <div className="flex gap-2 pt-2">
           <Button size="sm" variant="outline" className="flex-1 bg-transparent">
             <Eye className="h-4 w-4 mr-1" />
             View Outfit
           </Button>
-          <Button size="sm" className="flex-1 bg-primary hover:bg-primary/90">
+          <Button size="sm" className="flex-1 bg-primary hover:bg-primary/90" onClick={handleShopItems}>
             <ShoppingBag className="h-4 w-4 mr-1" />
-            Shop Items
+            Add All to Cart
           </Button>
         </div>
       </CardContent>

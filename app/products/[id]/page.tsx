@@ -12,11 +12,13 @@ import { WardrobeCompatibility } from "@/components/product/wardrobe-compatibili
 import { StylingSuggestions } from "@/components/product/styling-suggestions"
 import { ProductReviews } from "@/components/product/product-reviews"
 import { ProductSpecifications } from "@/components/product/product-specifications"
+import { AccessoryRecommendations } from "@/components/product/accessory-recommendations"
 import { WishlistButton } from "@/components/wishlist/wishlist-button"
 import { SocialShareButtons } from "@/components/social/social-share-buttons"
-import { ArrowLeft, ShoppingBag, CheckCircle } from "lucide-react"
+import { ArrowLeft, ShoppingBag, CheckCircle, ChevronLeft, ChevronRight } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
+import { formatCurrency } from "@/lib/utils/currency"
 import type { Product } from "@/lib/types/database"
 
 export default function ProductDetailPage() {
@@ -26,14 +28,18 @@ export default function ProductDetailPage() {
   const [product, setProduct] = useState<Product | null>(null)
   const [wardrobeCompatibility, setWardrobeCompatibility] = useState<any>(null)
   const [stylingRecommendations, setStylingRecommendations] = useState<any[]>([])
+  const [accessoryRecommendations, setAccessoryRecommendations] = useState<any[]>([])
   const [selectedSize, setSelectedSize] = useState("")
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [addingToCart, setAddingToCart] = useState(false)
   const [user, setUser] = useState<any>(null)
+  const [cartItemCount, setCartItemCount] = useState(0)
 
   useEffect(() => {
     checkAuth()
     fetchProduct()
+    fetchCartCount()
   }, [params.id])
 
   const checkAuth = async () => {
@@ -52,9 +58,11 @@ export default function ProductDetailPage() {
         setProduct(data.product)
         setWardrobeCompatibility(data.wardrobe_compatibility)
         setStylingRecommendations(data.styling_recommendations || [])
+        setAccessoryRecommendations(data.accessory_recommendations || [])
 
-        // Set default size
+        // Set default size based on user preferences or first available
         if (data.product.sizes && data.product.sizes.length > 0) {
+          // TODO: Get user's preferred size from profile
           setSelectedSize(data.product.sizes[0])
         }
       } else {
@@ -65,6 +73,19 @@ export default function ProductDetailPage() {
       router.push("/")
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchCartCount = async () => {
+    if (!user) return
+    try {
+      const response = await fetch("/api/cart/count")
+      if (response.ok) {
+        const data = await response.json()
+        setCartItemCount(data.count)
+      }
+    } catch (error) {
+      console.error("Failed to fetch cart count:", error)
     }
   }
 
@@ -96,10 +117,15 @@ export default function ProductDetailPage() {
       })
 
       if (response.ok) {
+        setCartItemCount((prev) => prev + 1)
+
         toast({
           title: "Added to cart",
           description: `${product?.name} has been added to your cart`,
         })
+
+        // Trigger cart update event for other components
+        window.dispatchEvent(new CustomEvent("cartUpdated"))
       } else {
         throw new Error("Failed to add to cart")
       }
@@ -129,6 +155,18 @@ export default function ProductDetailPage() {
       } catch (error) {
         console.error("Error tracking share:", error)
       }
+    }
+  }
+
+  const nextImage = () => {
+    if (product && product.images.length > 1) {
+      setSelectedImageIndex((prev) => (prev + 1) % product.images.length)
+    }
+  }
+
+  const prevImage = () => {
+    if (product && product.images.length > 1) {
+      setSelectedImageIndex((prev) => (prev - 1 + product.images.length) % product.images.length)
     }
   }
 
@@ -164,26 +202,69 @@ export default function ProductDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
           {/* Product Images */}
           <div className="space-y-4">
-            <div className="relative aspect-[4/5] rounded-lg overflow-hidden">
+            <div className="relative aspect-[4/5] rounded-lg overflow-hidden group">
               <Image
-                src={product.images[0] || "/placeholder.svg?height=600&width=480&query=premium menswear product"}
+                src={
+                  product.images[selectedImageIndex] ||
+                  "/placeholder.svg?height=600&width=480&query=premium menswear product"
+                }
                 alt={product.name}
                 fill
-                className="object-cover"
+                className="object-cover transition-transform duration-300 group-hover:scale-105"
               />
+
+              {product.images.length > 1 && (
+                <>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 hover:bg-white"
+                    onClick={prevImage}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 hover:bg-white"
+                    onClick={nextImage}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+
+                  {/* Image indicators */}
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                    {product.images.map((_, index) => (
+                      <button
+                        key={index}
+                        className={`w-2 h-2 rounded-full transition-colors ${
+                          index === selectedImageIndex ? "bg-white" : "bg-white/50"
+                        }`}
+                        onClick={() => setSelectedImageIndex(index)}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
 
             {product.images.length > 1 && (
               <div className="grid grid-cols-4 gap-2">
-                {product.images.slice(1, 5).map((image, index) => (
-                  <div key={index} className="relative aspect-square rounded-md overflow-hidden">
+                {product.images.slice(0, 4).map((image, index) => (
+                  <button
+                    key={index}
+                    className={`relative aspect-square rounded-md overflow-hidden border-2 transition-colors ${
+                      index === selectedImageIndex ? "border-primary" : "border-transparent hover:border-border"
+                    }`}
+                    onClick={() => setSelectedImageIndex(index)}
+                  >
                     <Image
                       src={image || "/placeholder.svg"}
-                      alt={`${product.name} ${index + 2}`}
+                      alt={`${product.name} ${index + 1}`}
                       fill
                       className="object-cover"
                     />
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
@@ -197,9 +278,12 @@ export default function ProductDetailPage() {
                   {product.category}
                 </Badge>
                 <Badge className="bg-accent text-accent-foreground">New</Badge>
+                {product.stock_quantity < 10 && product.stock_quantity > 0 && (
+                  <Badge variant="destructive">Only {product.stock_quantity} left</Badge>
+                )}
               </div>
               <h1 className="text-3xl font-heading font-black text-foreground">{product.name}</h1>
-              <p className="text-xl font-semibold text-foreground">${product.price}</p>
+              <p className="text-xl font-semibold text-foreground">{formatCurrency(product.price)}</p>
             </div>
 
             <p className="text-muted-foreground leading-relaxed">{product.description}</p>
@@ -221,32 +305,40 @@ export default function ProductDetailPage() {
               </Select>
             </div>
 
-            {/* Actions */}
-            <div className="flex gap-3">
-              <Button
-                size="lg"
-                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
-                onClick={addToCart}
-                disabled={!selectedSize || addingToCart}
-              >
-                {addingToCart ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                ) : (
-                  <ShoppingBag className="h-4 w-4 mr-2" />
-                )}
-                Add to Cart
-              </Button>
-              <WishlistButton productId={product.id} variant="outline" size="lg" />
-              <SocialShareButtons
-                url={`/products/${product.id}`}
-                title={`Check out this ${product.name} from MANUS`}
-                description={product.description}
-                image={product.images[0]}
-                hashtags={["MANUS", "mensfashion", product.category, ...(product.tags || [])]}
-                variant="outline"
-                size="lg"
-              />
-            </div>
+            {/* Stock Status */}
+            {product.stock_quantity === 0 ? (
+              <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                <p className="text-destructive font-medium">Out of Stock</p>
+                <p className="text-sm text-muted-foreground">This item is currently unavailable</p>
+              </div>
+            ) : (
+              /* Actions */
+              <div className="flex gap-3">
+                <Button
+                  size="lg"
+                  className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                  onClick={addToCart}
+                  disabled={!selectedSize || addingToCart || product.stock_quantity === 0}
+                >
+                  {addingToCart ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  ) : (
+                    <ShoppingBag className="h-4 w-4 mr-2" />
+                  )}
+                  Add to Cart
+                </Button>
+                <WishlistButton productId={product.id} variant="outline" size="lg" />
+                <SocialShareButtons
+                  url={`/products/${product.id}`}
+                  title={`Check out this ${product.name} from MANUS`}
+                  description={product.description}
+                  image={product.images[0]}
+                  hashtags={["MANUS", "mensfashion", product.category, ...(product.tags || [])]}
+                  variant="outline"
+                  size="lg"
+                />
+              </div>
+            )}
 
             {/* Product Features */}
             <Card>
@@ -283,6 +375,12 @@ export default function ProductDetailPage() {
             )}
           </div>
         </div>
+
+        {accessoryRecommendations.length > 0 && (
+          <div className="mb-16">
+            <AccessoryRecommendations recommendations={accessoryRecommendations} productName={product.name} />
+          </div>
+        )}
 
         {/* Product Specifications */}
         <div className="mb-16">

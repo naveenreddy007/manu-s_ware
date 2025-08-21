@@ -21,6 +21,16 @@ export function formatCurrencyWithDecimals(amount: number): string {
   }).format(amount)
 }
 
+export function formatCurrencyCompact(amount: number): string {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    notation: "compact",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 1,
+  }).format(amount)
+}
+
 // Currency symbol constant
 export const CURRENCY_SYMBOL = "₹"
 export const CURRENCY_CODE = "INR"

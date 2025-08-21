@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Search, Plus, X, Tag } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Search, Plus, X, Tag, Check, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { formatPrice } from "@/lib/utils/currency"
+import { formatCurrency } from "@/lib/utils/currency"
+import { useToast } from "@/hooks/use-toast"
 
 interface Product {
   id: string
@@ -20,6 +22,7 @@ interface Product {
   category: string
   color: string
   stock_quantity: number
+  affiliate_commission?: number
 }
 
 interface ProductTag {
@@ -34,17 +37,26 @@ interface ProductTaggerProps {
   tags: ProductTag[]
   onTagsChange: (tags: ProductTag[]) => void
   isEditing?: boolean
+  enableAffiliateProgram?: boolean
 }
 
-export function ProductTagger({ imageUrl, tags, onTagsChange, isEditing = false }: ProductTaggerProps) {
+export function ProductTagger({
+  imageUrl,
+  tags,
+  onTagsChange,
+  isEditing = false,
+  enableAffiliateProgram = true,
+}: ProductTaggerProps) {
   const [isTagging, setIsTagging] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<Product[]>([])
   const [showSearch, setShowSearch] = useState(false)
   const [pendingPosition, setPendingPosition] = useState<{ x: number; y: number } | null>(null)
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+  const [showConfirmation, setShowConfirmation] = useState(false)
   const [loading, setLoading] = useState(false)
   const imageRef = useRef<HTMLImageElement>(null)
-  const searchRef = useRef<HTMLDivElement>(null)
+  const { toast } = useToast()
 
   useEffect(() => {
     if (searchQuery.length >= 2) {
@@ -86,24 +98,98 @@ export function ProductTagger({ imageUrl, tags, onTagsChange, isEditing = false 
   }
 
   const handleProductSelect = (product: Product) => {
-    if (!pendingPosition) return
+    setSelectedProduct(product)
+    setShowSearch(false)
+    setShowConfirmation(true)
+  }
+
+  const confirmProductTag = async () => {
+    if (!pendingPosition || !selectedProduct) return
 
     const newTag: ProductTag = {
       id: `tag-${Date.now()}`,
-      product,
+      product: selectedProduct,
       x: pendingPosition.x,
       y: pendingPosition.y,
     }
 
-    onTagsChange([...tags, newTag])
+    try {
+      // Track affiliate interaction if enabled
+      if (enableAffiliateProgram) {
+        await fetch("/api/affiliate/track", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "product_tagged",
+            product_id: selectedProduct.id,
+            commission_rate: selectedProduct.affiliate_commission || 0.05,
+          }),
+        })
+      }
+
+      onTagsChange([...tags, newTag])
+
+      toast({
+        title: "Product Tagged Successfully!",
+        description: enableAffiliateProgram
+          ? `You'll earn ${((selectedProduct.affiliate_commission || 0.05) * 100).toFixed(1)}% commission on sales from this tag.`
+          : "Product has been tagged to your image.",
+      })
+    } catch (error) {
+      console.error("Error tracking affiliate action:", error)
+      // Still add the tag even if tracking fails
+      onTagsChange([...tags, newTag])
+      toast({
+        title: "Product Tagged",
+        description: "Product has been tagged to your image.",
+      })
+    }
+
     setPendingPosition(null)
-    setShowSearch(false)
+    setSelectedProduct(null)
+    setShowConfirmation(false)
     setIsTagging(false)
     setSearchQuery("")
   }
 
-  const handleRemoveTag = (tagId: string) => {
+  const cancelProductTag = () => {
+    setPendingPosition(null)
+    setSelectedProduct(null)
+    setShowConfirmation(false)
+    setIsTagging(false)
+  }
+
+  const handleRemoveTag = async (tagId: string) => {
+    const tagToRemove = tags.find((tag) => tag.id === tagId)
+
+    if (tagToRemove && enableAffiliateProgram) {
+      try {
+        await fetch("/api/affiliate/track", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "product_untagged",
+            product_id: tagToRemove.product.id,
+          }),
+        })
+      } catch (error) {
+        console.error("Error tracking affiliate removal:", error)
+      }
+    }
+
     onTagsChange(tags.filter((tag) => tag.id !== tagId))
+    toast({
+      title: "Product Tag Removed",
+      description: "The product tag has been removed from your image.",
+    })
+  }
+
+  const calculatePotentialEarnings = () => {
+    if (!enableAffiliateProgram) return 0
+    return tags.reduce((total, tag) => {
+      const commission = tag.product.affiliate_commission || 0.05
+      return total + tag.product.price * commission
+    }, 0)
   }
 
   return (
@@ -130,8 +216,8 @@ export function ProductTagger({ imageUrl, tags, onTagsChange, isEditing = false 
                 <Plus className="w-3 h-3" />
               </div>
 
-              {/* Product info tooltip */}
-              <Card className="absolute bottom-8 left-1/2 transform -translate-x-1/2 w-64 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
+              {/* Enhanced Product info tooltip with affiliate info */}
+              <Card className="absolute bottom-8 left-1/2 transform -translate-x-1/2 w-72 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
                 <CardContent className="p-3">
                   <div className="flex gap-3">
                     {tag.product.images?.[0] && (
@@ -144,7 +230,12 @@ export function ProductTagger({ imageUrl, tags, onTagsChange, isEditing = false 
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">{tag.product.name}</p>
                       <p className="text-xs text-muted-foreground">{tag.product.brand}</p>
-                      <p className="font-semibold text-sm">{formatPrice(tag.product.price)}</p>
+                      <p className="font-semibold text-sm">{formatCurrency(tag.product.price)}</p>
+                      {enableAffiliateProgram && tag.product.affiliate_commission && (
+                        <p className="text-xs text-green-600">
+                          Earn {formatCurrency(tag.product.price * tag.product.affiliate_commission)} per sale
+                        </p>
+                      )}
                     </div>
                   </div>
                   {isEditing && (
@@ -173,18 +264,34 @@ export function ProductTagger({ imageUrl, tags, onTagsChange, isEditing = false 
         )}
       </div>
 
-      {/* Controls */}
+      {/* Enhanced Controls with affiliate info */}
       {isEditing && (
-        <div className="mt-4 flex gap-2">
-          <Button onClick={() => setIsTagging(!isTagging)} variant={isTagging ? "default" : "outline"} size="sm">
-            <Tag className="w-4 h-4 mr-2" />
-            {isTagging ? "Cancel Tagging" : "Add Product Tag"}
-          </Button>
+        <div className="mt-4 space-y-3">
+          <div className="flex gap-2 items-center">
+            <Button onClick={() => setIsTagging(!isTagging)} variant={isTagging ? "default" : "outline"} size="sm">
+              <Tag className="w-4 h-4 mr-2" />
+              {isTagging ? "Cancel Tagging" : "Add Product Tag"}
+            </Button>
 
-          {tags.length > 0 && (
-            <Badge variant="secondary">
-              {tags.length} product{tags.length !== 1 ? "s" : ""} tagged
-            </Badge>
+            {tags.length > 0 && (
+              <Badge variant="secondary">
+                {tags.length} product{tags.length !== 1 ? "s" : ""} tagged
+              </Badge>
+            )}
+          </div>
+
+          {enableAffiliateProgram && tags.length > 0 && (
+            <Card className="p-3 bg-green-50 border-green-200">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-green-600" />
+                <div className="text-sm">
+                  <p className="font-medium text-green-800">Potential Earnings</p>
+                  <p className="text-green-600">
+                    Up to {formatCurrency(calculatePotentialEarnings())} per complete outfit sale
+                  </p>
+                </div>
+              </div>
+            </Card>
           )}
         </div>
       )}
@@ -244,11 +351,16 @@ export function ProductTagger({ imageUrl, tags, onTagsChange, isEditing = false 
                       <p className="font-medium text-sm truncate">{product.name}</p>
                       <p className="text-xs text-muted-foreground">{product.brand}</p>
                       <div className="flex items-center justify-between mt-1">
-                        <p className="font-semibold text-sm">{formatPrice(product.price)}</p>
+                        <p className="font-semibold text-sm">{formatCurrency(product.price)}</p>
                         <Badge variant="outline" className="text-xs">
                           {product.stock_quantity} in stock
                         </Badge>
                       </div>
+                      {enableAffiliateProgram && product.affiliate_commission && (
+                        <p className="text-xs text-green-600 mt-1">
+                          {(product.affiliate_commission * 100).toFixed(1)}% commission
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -257,6 +369,58 @@ export function ProductTagger({ imageUrl, tags, onTagsChange, isEditing = false 
           </Card>
         </div>
       )}
+
+      <Dialog open={showConfirmation} onOpenChange={setShowConfirmation}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Product Tag</DialogTitle>
+          </DialogHeader>
+
+          {selectedProduct && (
+            <div className="space-y-4">
+              <div className="flex gap-3">
+                {selectedProduct.images?.[0] && (
+                  <img
+                    src={selectedProduct.images[0] || "/placeholder.svg"}
+                    alt={selectedProduct.name}
+                    className="w-16 h-16 object-cover rounded"
+                  />
+                )}
+                <div className="flex-1">
+                  <p className="font-medium">{selectedProduct.name}</p>
+                  <p className="text-sm text-muted-foreground">{selectedProduct.brand}</p>
+                  <p className="font-semibold">{formatCurrency(selectedProduct.price)}</p>
+                </div>
+              </div>
+
+              {enableAffiliateProgram && (
+                <Card className="p-3 bg-blue-50 border-blue-200">
+                  <div className="text-sm">
+                    <p className="font-medium text-blue-800">Affiliate Program</p>
+                    <p className="text-blue-600">
+                      You'll earn {((selectedProduct.affiliate_commission || 0.05) * 100).toFixed(1)}% commission (
+                      {formatCurrency(selectedProduct.price * (selectedProduct.affiliate_commission || 0.05))}) for each
+                      sale made through this tag.
+                    </p>
+                  </div>
+                </Card>
+              )}
+
+              <p className="text-sm text-muted-foreground">Are you sure you want to tag this product on your image?</p>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={cancelProductTag}>
+              Cancel
+            </Button>
+            <Button onClick={confirmProductTag}>
+              <Check className="w-4 h-4 mr-2" />
+              Confirm Tag
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
