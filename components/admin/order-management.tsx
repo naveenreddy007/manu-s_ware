@@ -29,6 +29,7 @@ import {
   Mail,
 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
+import { formatCurrency } from "@/lib/utils/currency"
 
 interface OrderItem {
   id: string
@@ -154,15 +155,6 @@ export function OrderManagement() {
     }
 
     setFilteredOrders(filtered)
-  }
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
   }
 
   const updateOrderStatus = async (orderId: string, newStatus: string, trackingNumber?: string, notes?: string) => {

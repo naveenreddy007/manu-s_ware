@@ -27,6 +27,7 @@ import {
 } from "lucide-react"
 import { updateUserRole } from "@/lib/actions"
 import { toast } from "@/hooks/use-toast"
+import { formatCurrency } from "@/lib/utils/currency"
 
 interface UserActivity {
   orders_count: number
@@ -258,15 +259,6 @@ export function UserManagement() {
       default:
         return Users
     }
-  }
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
   }
 
   if (loading) {

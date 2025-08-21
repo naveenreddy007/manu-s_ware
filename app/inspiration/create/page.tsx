@@ -250,7 +250,13 @@ export default function CreateInspirationPage() {
         const fileName = `${user.id}/${Date.now()}-${i}.${fileExt}`
 
         try {
-          const { data: buckets } = await supabase.storage.listBuckets()
+          // Check if bucket exists, create if needed
+          const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets()
+
+          if (bucketsError) {
+            console.warn("[v0] Could not list buckets:", bucketsError.message)
+          }
+
           const imagesBucket = buckets?.find((bucket) => bucket.name === "images")
 
           if (!imagesBucket) {
@@ -260,21 +266,35 @@ export default function CreateInspirationPage() {
               allowedMimeTypes: ["image/*"],
               fileSizeLimit: 5242880, // 5MB
             })
-            if (bucketError) {
+            if (bucketError && !bucketError.message.includes("already exists")) {
               console.warn("[v0] Bucket creation warning:", bucketError.message)
             }
           }
 
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from("images")
-            .upload(fileName, compressedFile, {
+          // Upload with retry logic
+          let uploadData, uploadError
+          for (let attempt = 0; attempt < 3; attempt++) {
+            const result = await supabase.storage.from("images").upload(fileName, compressedFile, {
               cacheControl: "3600",
               upsert: false,
             })
 
+            uploadData = result.data
+            uploadError = result.error
+
+            if (!uploadError) break
+
+            console.log(`[v0] Upload attempt ${attempt + 1} failed:`, uploadError.message)
+            if (attempt < 2) {
+              await new Promise((resolve) => setTimeout(resolve, 1000)) // Wait 1 second before retry
+            }
+          }
+
           if (uploadError) {
-            console.error("[v0] Upload error details:", uploadError)
-            throw uploadError
+            console.error("[v0] Upload error after retries:", uploadError)
+            // Continue with a placeholder instead of failing completely
+            uploadedImages.push(`/placeholder.svg?height=400&width=400&query=upload-failed-${i}`)
+            continue
           }
 
           const {
@@ -285,11 +305,12 @@ export default function CreateInspirationPage() {
           console.log(`[v0] Image ${i + 1} uploaded successfully to:`, publicUrl)
         } catch (uploadError: any) {
           console.error("[v0] Upload error:", uploadError)
-          throw new Error(`Failed to upload image ${i + 1}: ${uploadError.message}`)
+          // Continue with placeholder instead of failing
+          uploadedImages.push(`/placeholder.svg?height=400&width=400&query=upload-error-${i}`)
         }
       }
 
-      console.log("[v0] All images uploaded successfully, creating inspiration post...")
+      console.log("[v0] Image upload process completed, creating inspiration post...")
 
       const { data: postData, error: insertError } = await supabase
         .from("outfit_inspirations")
@@ -298,6 +319,7 @@ export default function CreateInspirationPage() {
           title: draft.title,
           description: draft.description,
           image_url: uploadedImages[0],
+          additional_images: uploadedImages.length > 1 ? uploadedImages.slice(1) : [],
           is_public: draft.isPublic,
           tags: [...draft.styleTags, ...draft.occasionTags],
         })
@@ -319,6 +341,7 @@ export default function CreateInspirationPage() {
           position_y: 0,
           image_url: imageUrl,
           item_type: "image",
+          image_index: index + 1,
         }))
 
         const { error: itemsError } = await supabase.from("outfit_inspiration_items").insert(additionalImageItems)

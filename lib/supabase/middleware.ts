@@ -50,9 +50,6 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(new URL("/", request.url))
   }
 
-  // Refresh session if expired - required for Server Components
-  await supabase.auth.getUser()
-
   // Protected routes - redirect to login if not authenticated
   const isAuthRoute =
     request.nextUrl.pathname.startsWith("/auth/login") ||
@@ -70,11 +67,29 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/favicon")
 
   if (!isAuthRoute && !isPublicRoute) {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    try {
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser()
 
-    if (!user) {
+      if (error && error.message.includes("Invalid Refresh Token")) {
+        console.log("[v0] Invalid refresh token detected, clearing auth cookies")
+        const response = NextResponse.redirect(new URL("/auth/login", request.url))
+        // Clear all auth-related cookies
+        response.cookies.delete("sb-access-token")
+        response.cookies.delete("sb-refresh-token")
+        response.cookies.delete("supabase-auth-token")
+        return response
+      }
+
+      if (!user && !error) {
+        const redirectUrl = new URL("/auth/login", request.url)
+        redirectUrl.searchParams.set("redirectTo", request.nextUrl.pathname)
+        return NextResponse.redirect(redirectUrl)
+      }
+    } catch (error) {
+      console.log("[v0] Auth error in middleware:", error)
       const redirectUrl = new URL("/auth/login", request.url)
       redirectUrl.searchParams.set("redirectTo", request.nextUrl.pathname)
       return NextResponse.redirect(redirectUrl)

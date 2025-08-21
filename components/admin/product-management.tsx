@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Plus, Edit, Trash2, Search, Upload, Package, IndianRupee, ImageIcon } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
+import { formatCurrency } from "@/lib/utils/currency"
 
 interface Product {
   id: string
@@ -104,15 +105,6 @@ export function ProductManagement() {
     }
 
     setFilteredProducts(filtered)
-  }
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
   }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
