@@ -29,6 +29,15 @@ export function EditItemDialog({ item, categories, onUpdate, onClose }: EditItem
     size: item.size || "",
     image_url: item.image_url || "",
     notes: item.notes || "",
+    style: item.style || "",
+    pattern: item.pattern || "",
+    material: item.material || "",
+    occasion: item.occasion || "",
+    season: item.season || "",
+    fit: item.fit || "",
+    neckline: item.neckline || "",
+    sleeve_length: item.sleeve_length || "",
+    formality_score: item.formality_score || 3,
   })
   const [tags, setTags] = useState<string[]>(item.tags || [])
   const [newTag, setNewTag] = useState("")
@@ -69,7 +78,7 @@ export function EditItemDialog({ item, categories, onUpdate, onClose }: EditItem
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-heading">Edit Wardrobe Item</DialogTitle>
           <DialogDescription>Update your wardrobe item details</DialogDescription>
@@ -137,6 +146,196 @@ export function EditItemDialog({ item, categories, onUpdate, onClose }: EditItem
                 onChange={(e) => setFormData({ ...formData, size: e.target.value })}
                 placeholder="e.g., M, 32"
               />
+            </div>
+          </div>
+
+          <div className="space-y-4 border-t pt-4">
+            <h3 className="font-medium text-sm text-muted-foreground">Fashion Details</h3>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="style">Style</Label>
+                <Select value={formData.style} onValueChange={(value) => setFormData({ ...formData, style: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select style" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="casual">Casual</SelectItem>
+                    <SelectItem value="formal">Formal</SelectItem>
+                    <SelectItem value="business">Business</SelectItem>
+                    <SelectItem value="streetwear">Streetwear</SelectItem>
+                    <SelectItem value="bohemian">Bohemian</SelectItem>
+                    <SelectItem value="minimalist">Minimalist</SelectItem>
+                    <SelectItem value="vintage">Vintage</SelectItem>
+                    <SelectItem value="sporty">Sporty</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="pattern">Pattern</Label>
+                <Select
+                  value={formData.pattern}
+                  onValueChange={(value) => setFormData({ ...formData, pattern: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select pattern" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="solid">Solid</SelectItem>
+                    <SelectItem value="striped">Striped</SelectItem>
+                    <SelectItem value="plaid">Plaid</SelectItem>
+                    <SelectItem value="floral">Floral</SelectItem>
+                    <SelectItem value="geometric">Geometric</SelectItem>
+                    <SelectItem value="polka-dot">Polka Dot</SelectItem>
+                    <SelectItem value="abstract">Abstract</SelectItem>
+                    <SelectItem value="animal-print">Animal Print</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="material">Material</Label>
+                <Select
+                  value={formData.material}
+                  onValueChange={(value) => setFormData({ ...formData, material: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select material" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cotton">Cotton</SelectItem>
+                    <SelectItem value="wool">Wool</SelectItem>
+                    <SelectItem value="silk">Silk</SelectItem>
+                    <SelectItem value="linen">Linen</SelectItem>
+                    <SelectItem value="polyester">Polyester</SelectItem>
+                    <SelectItem value="denim">Denim</SelectItem>
+                    <SelectItem value="leather">Leather</SelectItem>
+                    <SelectItem value="cashmere">Cashmere</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="occasion">Occasion</Label>
+                <Select
+                  value={formData.occasion}
+                  onValueChange={(value) => setFormData({ ...formData, occasion: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select occasion" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="everyday">Everyday</SelectItem>
+                    <SelectItem value="work">Work</SelectItem>
+                    <SelectItem value="party">Party</SelectItem>
+                    <SelectItem value="formal-event">Formal Event</SelectItem>
+                    <SelectItem value="date-night">Date Night</SelectItem>
+                    <SelectItem value="vacation">Vacation</SelectItem>
+                    <SelectItem value="workout">Workout</SelectItem>
+                    <SelectItem value="special-occasion">Special Occasion</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="season">Season</Label>
+                <Select value={formData.season} onValueChange={(value) => setFormData({ ...formData, season: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select season" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="spring">Spring</SelectItem>
+                    <SelectItem value="summer">Summer</SelectItem>
+                    <SelectItem value="fall">Fall</SelectItem>
+                    <SelectItem value="winter">Winter</SelectItem>
+                    <SelectItem value="all-season">All Season</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="fit">Fit</Label>
+                <Select value={formData.fit} onValueChange={(value) => setFormData({ ...formData, fit: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select fit" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="slim">Slim</SelectItem>
+                    <SelectItem value="regular">Regular</SelectItem>
+                    <SelectItem value="loose">Loose</SelectItem>
+                    <SelectItem value="oversized">Oversized</SelectItem>
+                    <SelectItem value="tailored">Tailored</SelectItem>
+                    <SelectItem value="relaxed">Relaxed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="neckline">Neckline</Label>
+                <Select
+                  value={formData.neckline}
+                  onValueChange={(value) => setFormData({ ...formData, neckline: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select neckline" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="crew">Crew</SelectItem>
+                    <SelectItem value="v-neck">V-Neck</SelectItem>
+                    <SelectItem value="scoop">Scoop</SelectItem>
+                    <SelectItem value="boat">Boat</SelectItem>
+                    <SelectItem value="off-shoulder">Off-Shoulder</SelectItem>
+                    <SelectItem value="turtleneck">Turtleneck</SelectItem>
+                    <SelectItem value="mock-neck">Mock Neck</SelectItem>
+                    <SelectItem value="not-applicable">Not Applicable</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="sleeve_length">Sleeve Length</Label>
+                <Select
+                  value={formData.sleeve_length}
+                  onValueChange={(value) => setFormData({ ...formData, sleeve_length: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select sleeve length" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sleeveless">Sleeveless</SelectItem>
+                    <SelectItem value="short">Short</SelectItem>
+                    <SelectItem value="three-quarter">Three Quarter</SelectItem>
+                    <SelectItem value="long">Long</SelectItem>
+                    <SelectItem value="not-applicable">Not Applicable</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="formality_score">Formality Level (1-5)</Label>
+              <Select
+                value={formData.formality_score.toString()}
+                onValueChange={(value) => setFormData({ ...formData, formality_score: Number.parseInt(value) })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select formality level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">1 - Very Casual</SelectItem>
+                  <SelectItem value="2">2 - Casual</SelectItem>
+                  <SelectItem value="3">3 - Smart Casual</SelectItem>
+                  <SelectItem value="4">4 - Business</SelectItem>
+                  <SelectItem value="5">5 - Formal</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
