@@ -71,12 +71,21 @@ Do not include any explanations, reasoning, or additional text. Only return the 
     const response = await result.response
     const text = response.text()
 
+    let cleanedText = text.trim()
+
+    // Remove markdown code block wrapper if present
+    if (cleanedText.startsWith("```json")) {
+      cleanedText = cleanedText.replace(/^```json\s*/, "").replace(/\s*```$/, "")
+    } else if (cleanedText.startsWith("```")) {
+      cleanedText = cleanedText.replace(/^```\s*/, "").replace(/\s*```$/, "")
+    }
+
     // Parse the JSON response
     let rankedData
     try {
-      rankedData = JSON.parse(text.trim())
+      rankedData = JSON.parse(cleanedText)
     } catch (parseError) {
-      console.error("Failed to parse Gemini response:", text)
+      console.error("Failed to parse Gemini response:", cleanedText)
       return NextResponse.json({ error: "Invalid AI response format" }, { status: 500 })
     }
 

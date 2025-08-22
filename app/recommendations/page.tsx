@@ -5,10 +5,11 @@ import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { ArrowLeft, Sparkles, Loader2, ShoppingBag } from "lucide-react"
+import { ArrowLeft, Sparkles, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
+import AddToCartButton from "@/components/product/add-to-cart-button"
 
 interface WardrobeItem {
   id: string
@@ -286,10 +287,7 @@ export default function RecommendationsPage() {
                           </Badge>
                         )}
                       </div>
-                      <Button size="sm" className="w-full">
-                        <ShoppingBag className="h-4 w-4 mr-2" />
-                        Add to Cart
-                      </Button>
+                      <AddToCartButton product={product} size="sm" className="w-full" />
                     </CardContent>
                   </Card>
                 ))}
