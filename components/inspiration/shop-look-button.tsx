@@ -15,9 +15,10 @@ interface ShopLookButtonProps {
   }>
   type: "complete_look" | "individual_item"
   className?: string
+  creator_id?: string
 }
 
-export function ShopLookButton({ postId, products, type, className }: ShopLookButtonProps) {
+export function ShopLookButton({ postId, products, type, className, creator_id }: ShopLookButtonProps) {
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
 
@@ -31,15 +32,21 @@ export function ShopLookButton({ postId, products, type, className }: ShopLookBu
         size: product.size || "M",
       }))
 
+      const requestBody: any = {
+        items,
+        type,
+      }
+
+      if (creator_id) {
+        requestBody.creator_id = creator_id
+      }
+
       const response = await fetch(`/api/inspiration/${postId}/shop`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          items,
-          type,
-        }),
+        body: JSON.stringify(requestBody),
       })
 
       const data = await response.json()

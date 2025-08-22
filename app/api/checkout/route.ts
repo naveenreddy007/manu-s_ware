@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
       save_billing_address = false,
       shipping_is_default = false,
       billing_is_default = false,
+      creator_id,
     } = body
 
     // Get cart items
@@ -128,6 +129,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const metadata: Record<string, any> = {}
+    if (creator_id) {
+      metadata.creator_id = creator_id
+    }
+
     // Create order
     const { data: order, error: orderError } = await supabase
       .from("orders")
@@ -160,6 +166,7 @@ export async function POST(request: NextRequest) {
         payment_method: payment_method,
         status: "confirmed",
         payment_status: "paid", // Simplified for demo
+        metadata: Object.keys(metadata).length > 0 ? metadata : null,
       })
       .select()
       .single()
