@@ -60,12 +60,21 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
   }
 
   const processImage = async (file: File) => {
+    if (!file) {
+      alert("No file selected. Please try again.")
+      return
+    }
+
+    console.log("[v0] Processing image file:", file.name, file.size)
+
     const canvas = document.createElement("canvas")
     const ctx = canvas.getContext("2d")
     const img = new Image()
 
     img.onload = async () => {
       try {
+        console.log("[v0] Image loaded successfully, dimensions:", img.width, img.height)
+
         const maxSize = 1024
         const ratio = Math.min(maxSize / img.width, maxSize / img.height)
         canvas.width = img.width * ratio
@@ -74,41 +83,75 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
         if (ctx) {
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
           const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.8)
+
+          console.log("[v0] Compressed image data URL length:", compressedDataUrl.length)
+
+          if (!compressedDataUrl || compressedDataUrl === "data:," || compressedDataUrl.length < 100) {
+            console.error("[v0] Invalid compressed data URL")
+            alert("Failed to process image properly. Please try taking another photo.")
+            return
+          }
+
           setImage(compressedDataUrl)
 
-          const compressedFile = await compressImage(canvas, 0.8)
-          setCompressedFile(compressedFile)
+          try {
+            const compressedFile = await compressImage(canvas, 0.8)
+            console.log("[v0] Compressed file created:", compressedFile.name, compressedFile.size)
+            setCompressedFile(compressedFile)
 
-          analyzeImage(compressedDataUrl)
+            await analyzeImage(compressedDataUrl)
+          } catch (compressionError) {
+            console.error("[v0] Error during image compression:", compressionError)
+            alert("Failed to compress image. Please try again.")
+          }
         }
       } catch (error) {
-        console.error("Error processing image:", error)
+        console.error("[v0] Error in image onload handler:", error)
         alert("Failed to process image. Please try again.")
       }
     }
 
-    img.onerror = () => {
+    img.onerror = (errorEvent) => {
+      console.error("[v0] Image load error:", errorEvent)
       alert("Failed to load image. Please select a valid image file.")
     }
 
-    img.src = URL.createObjectURL(file)
+    try {
+      img.src = URL.createObjectURL(file)
+    } catch (error) {
+      console.error("[v0] Error creating object URL:", error)
+      alert("Failed to process file. Please try again.")
+    }
   }
 
   const handleCameraCapture = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("[v0] Camera capture triggered")
     const file = event.target.files?.[0]
     if (file) {
+      console.log("[v0] File selected from camera:", file.name)
       await processImage(file)
+    } else {
+      console.log("[v0] No file selected from camera")
     }
   }
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("[v0] File upload triggered")
     const file = event.target.files?.[0]
     if (file) {
+      console.log("[v0] File selected for upload:", file.name)
       await processImage(file)
+    } else {
+      console.log("[v0] No file selected for upload")
     }
   }
 
   const analyzeImage = async (imageDataUrl: string) => {
+    if (!imageDataUrl || !imageDataUrl.startsWith("data:image/") || imageDataUrl.length < 100) {
+      alert("Invalid image data. Please try taking another photo.")
+      return
+    }
+
     setAnalyzing(true)
     try {
       const response = await fetch("/api/wardrobe/analyze-image", {
@@ -126,9 +169,14 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
           color: analysis.color || "",
           size: analysis.size || "",
         })
+      } else {
+        const errorData = await response.json()
+        console.error("Image analysis failed:", errorData)
+        alert("Failed to analyze image. Please try again.")
       }
     } catch (error) {
       console.error("Failed to analyze image:", error)
+      alert("Failed to analyze image. Please check your connection and try again.")
     } finally {
       setAnalyzing(false)
     }

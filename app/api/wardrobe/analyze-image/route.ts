@@ -5,6 +5,14 @@ export async function POST(request: Request) {
   try {
     const { image } = await request.json()
 
+    if (!image || typeof image !== "string" || image.trim() === "") {
+      return NextResponse.json({ error: "Invalid or missing image data" }, { status: 400 })
+    }
+
+    if (!image.startsWith("data:image/") || image.length < 100) {
+      return NextResponse.json({ error: "Invalid image format. Expected base64 data URL." }, { status: 400 })
+    }
+
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
 
