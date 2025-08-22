@@ -36,6 +36,15 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
     brand: "",
     color: "",
     size: "",
+    style: "",
+    pattern: "",
+    material: "",
+    occasion: "",
+    season: "",
+    fit: "",
+    neckline: "",
+    sleeve_length: "",
+    formality_score: 3,
   })
 
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -146,6 +155,15 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
           brand: analysis.brand || "",
           color: analysis.color || "",
           size: analysis.size || "",
+          style: analysis.style || "",
+          pattern: analysis.pattern || "",
+          material: analysis.material || "",
+          occasion: analysis.occasion || "",
+          season: analysis.season || "",
+          fit: analysis.fit || "",
+          neckline: analysis.neckline || "",
+          sleeve_length: analysis.sleeve_length || "",
+          formality_score: analysis.formality_score || 3,
         })
       } else {
         const errorData = await response.json()
@@ -220,7 +238,22 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
     }
     setImage(null)
     setCompressedFile(null)
-    setFormData({ name: "", category: "", brand: "", color: "", size: "" })
+    setFormData({
+      name: "",
+      category: "",
+      brand: "",
+      color: "",
+      size: "",
+      style: "",
+      pattern: "",
+      material: "",
+      occasion: "",
+      season: "",
+      fit: "",
+      neckline: "",
+      sleeve_length: "",
+      formality_score: 3,
+    })
     setProcessing(false)
     setAnalyzing(false)
   }
@@ -359,6 +392,62 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
                   />
                 </div>
               </div>
+
+              {(formData.style || formData.pattern || formData.material) && (
+                <div className="space-y-4 border-t pt-4">
+                  <Label className="text-sm font-medium text-muted-foreground">AI Analysis Results</Label>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="style">Style</Label>
+                      <Input id="style" value={formData.style} disabled className="bg-muted" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="pattern">Pattern</Label>
+                      <Input id="pattern" value={formData.pattern} disabled className="bg-muted" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="material">Material</Label>
+                      <Input id="material" value={formData.material} disabled className="bg-muted" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="occasion">Occasion</Label>
+                      <Input id="occasion" value={formData.occasion} disabled className="bg-muted" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="season">Season</Label>
+                      <Input id="season" value={formData.season} disabled className="bg-muted" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="fit">Fit</Label>
+                      <Input id="fit" value={formData.fit} disabled className="bg-muted" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="formality_score">Formality (1-5)</Label>
+                      <Input id="formality_score" value={formData.formality_score} disabled className="bg-muted" />
+                    </div>
+                  </div>
+
+                  {(formData.neckline !== "none" || formData.sleeve_length !== "none") && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="neckline">Neckline</Label>
+                        <Input id="neckline" value={formData.neckline} disabled className="bg-muted" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="sleeve_length">Sleeve Length</Label>
+                        <Input id="sleeve_length" value={formData.sleeve_length} disabled className="bg-muted" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="flex gap-2 pt-4">
                 <Button type="button" variant="outline" onClick={resetDialog} className="flex-1 bg-transparent">

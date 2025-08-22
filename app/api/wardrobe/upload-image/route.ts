@@ -35,24 +35,30 @@ export async function POST(request: Request) {
     const formData = await request.formData()
     const file = formData.get("file") as File
 
-    if (!file) {
+    if (!file || !(file instanceof File)) {
+      console.log("[v0] No valid file found in FormData")
       return NextResponse.json({ error: "No file provided" }, { status: 400 })
     }
 
     console.log("[v0] Starting image upload for user:", user.id)
     console.log("[v0] File details:", { name: file.name, size: file.size, type: file.type })
 
-    const buffer = Buffer.from(await file.arrayBuffer())
+    if (file.size === 0) {
+      return NextResponse.json({ error: "Empty file provided" }, { status: 400 })
+    }
 
-    // Generate unique filename with user folder structure
-    const fileExtension = file.name.split(".").pop() || "jpg"
+    if (!file.type.startsWith("image/")) {
+      return NextResponse.json({ error: "File must be an image" }, { status: 400 })
+    }
+
+    const fileExtension = file.type === "image/png" ? "png" : "jpg"
     const filename = `${user.id}/${Date.now()}-wardrobe-item.${fileExtension}`
 
     console.log("[v0] Uploading to filename:", filename)
 
-    // Upload to Supabase Storage
-    const { data, error } = await supabase.storage.from("images").upload(filename, buffer, {
-      contentType: file.type || "image/jpeg",
+    const { data, error } = await supabase.storage.from("images").upload(filename, file, {
+      contentType: file.type,
+      cacheControl: "3600",
       upsert: false,
     })
 
@@ -61,7 +67,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error: "Failed to upload image",
-          details: error.message,
+          details: error.message || "Storage upload failed",
         },
         { status: 500 },
       )
@@ -69,7 +75,6 @@ export async function POST(request: Request) {
 
     console.log("[v0] Upload successful:", data)
 
-    // Get public URL
     const {
       data: { publicUrl },
     } = supabase.storage.from("images").getPublicUrl(filename)

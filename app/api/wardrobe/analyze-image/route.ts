@@ -25,8 +25,24 @@ export async function POST(request: Request) {
 {
   "name": "A descriptive name for the item (e.g., 'Maroon Short-Sleeve Shirt')",
   "category": "One of: tops, bottoms, outerwear, shoes, or accessories",
-  "color": "The single most dominant color (e.g., 'Maroon')"
+  "color": "The single most dominant color (e.g., 'Maroon')",
+  "style": "Fashion style (e.g., 'casual', 'formal', 'bohemian', 'minimalist', 'vintage')",
+  "pattern": "Pattern type (e.g., 'solid', 'striped', 'floral', 'geometric', 'plaid')",
+  "material": "Primary material (e.g., 'cotton', 'denim', 'silk', 'wool', 'polyester')",
+  "occasion": "Best occasion (e.g., 'casual', 'work', 'formal', 'party', 'sports')",
+  "season": "Best season (e.g., 'spring', 'summer', 'fall', 'winter', 'all-season')",
+  "fit": "Fit type (e.g., 'slim', 'regular', 'loose', 'oversized', 'tailored')",
+  "neckline": "Neckline type for tops (e.g., 'crew', 'v-neck', 'scoop', 'collar', 'none')",
+  "sleeve_length": "Sleeve length for tops (e.g., 'short', 'long', 'sleeveless', '3/4', 'none')",
+  "formality_score": 3
 }
+
+The formality_score should be a number from 1-5 where:
+1 = Very casual (gym wear, loungewear)
+2 = Casual (everyday wear, weekend)
+3 = Smart casual (casual office, dinner out)
+4 = Business formal (office meetings, interviews)
+5 = Very formal (black tie, evening wear)
 
 Return only the JSON object, no additional text or formatting.`
 
@@ -58,6 +74,11 @@ Return only the JSON object, no additional text or formatting.`
       if (!validCategories.includes(analysis.category)) {
         analysis.category = "tops" // Default fallback
       }
+
+      // Ensure formality_score is a valid number between 1-5
+      if (!analysis.formality_score || analysis.formality_score < 1 || analysis.formality_score > 5) {
+        analysis.formality_score = 3 // Default to smart casual
+      }
     } catch (parseError) {
       console.error("JSON parsing error:", parseError)
       console.error("Raw Gemini response:", text)
@@ -67,6 +88,15 @@ Return only the JSON object, no additional text or formatting.`
         name: "Clothing Item",
         category: "tops",
         color: "unknown",
+        style: "casual",
+        pattern: "solid",
+        material: "cotton",
+        occasion: "casual",
+        season: "all-season",
+        fit: "regular",
+        neckline: "crew",
+        sleeve_length: "short",
+        formality_score: 3,
       }
     }
 

@@ -46,7 +46,26 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json()
-  const { name, category, subcategory, brand, color, size, image_url, tags, notes } = body
+  const {
+    name,
+    category,
+    subcategory,
+    brand,
+    color,
+    size,
+    image_url,
+    tags,
+    notes,
+    style,
+    pattern,
+    material,
+    occasion,
+    season,
+    fit,
+    neckline,
+    sleeve_length,
+    formality_score,
+  } = body
 
   const { data: item, error } = await supabase
     .from("wardrobe_items")
@@ -62,6 +81,15 @@ export async function POST(request: Request) {
       tags: tags || [],
       notes,
       source: "manual",
+      style,
+      pattern,
+      material,
+      occasion,
+      season,
+      fit,
+      neckline,
+      sleeve_length,
+      formality_score,
     })
     .select()
     .single()
