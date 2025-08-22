@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,6 +17,8 @@ import {
 import { Camera, Upload, Loader2 } from "lucide-react"
 import Image from "next/image"
 
+import imageCompression from "browser-image-compression"
+
 interface CameraUploadDialogProps {
   onAdd: (item: any) => void
   categories: string[]
@@ -28,6 +29,7 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
   const [image, setImage] = useState<string | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [processing, setProcessing] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     category: "",
@@ -38,26 +40,7 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
   const [compressedFile, setCompressedFile] = useState<File | null>(null)
-
-  const compressImage = (canvas: HTMLCanvasElement, quality = 0.8): Promise<File> => {
-    return new Promise((resolve) => {
-      canvas.toBlob(
-        (blob) => {
-          if (blob) {
-            const file = new File([blob], `wardrobe-item-${Date.now()}.jpg`, {
-              type: "image/jpeg",
-              lastModified: Date.now(),
-            })
-            resolve(file)
-          }
-        },
-        "image/jpeg",
-        quality,
-      )
-    })
-  }
 
   const processImage = async (file: File) => {
     if (!file) {
@@ -66,61 +49,48 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
     }
 
     console.log("[v0] Processing image file:", file.name, file.size)
-
-    const canvas = document.createElement("canvas")
-    const ctx = canvas.getContext("2d")
-    const img = new Image()
-
-    img.onload = async () => {
-      try {
-        console.log("[v0] Image loaded successfully, dimensions:", img.width, img.height)
-
-        const maxSize = 1024
-        const ratio = Math.min(maxSize / img.width, maxSize / img.height)
-        canvas.width = img.width * ratio
-        canvas.height = img.height * ratio
-
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-          const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.8)
-
-          console.log("[v0] Compressed image data URL length:", compressedDataUrl.length)
-
-          if (!compressedDataUrl || compressedDataUrl === "data:," || compressedDataUrl.length < 100) {
-            console.error("[v0] Invalid compressed data URL")
-            alert("Failed to process image properly. Please try taking another photo.")
-            return
-          }
-
-          setImage(compressedDataUrl)
-
-          try {
-            const compressedFile = await compressImage(canvas, 0.8)
-            console.log("[v0] Compressed file created:", compressedFile.name, compressedFile.size)
-            setCompressedFile(compressedFile)
-
-            await analyzeImage(compressedDataUrl)
-          } catch (compressionError) {
-            console.error("[v0] Error during image compression:", compressionError)
-            alert("Failed to compress image. Please try again.")
-          }
-        }
-      } catch (error) {
-        console.error("[v0] Error in image onload handler:", error)
-        alert("Failed to process image. Please try again.")
-      }
-    }
-
-    img.onerror = (errorEvent) => {
-      console.error("[v0] Image load error:", errorEvent)
-      alert("Failed to load image. Please select a valid image file.")
-    }
+    setProcessing(true)
 
     try {
-      img.src = URL.createObjectURL(file)
+      // Compression options
+      const options = {
+        maxSizeMB: 1, // Maximum file size in MB
+        maxWidthOrHeight: 1024, // Maximum width or height
+        useWebWorker: true, // Use web worker for better performance
+        fileType: "image/jpeg" as const,
+        initialQuality: 0.8,
+      }
+
+      console.log("[v0] Starting image compression...")
+
+      // Compress the image using browser-image-compression
+      const compressedFile = await imageCompression(file, options)
+
+      console.log("[v0] Image compressed successfully:", {
+        originalSize: file.size,
+        compressedSize: compressedFile.size,
+        compressionRatio: (((file.size - compressedFile.size) / file.size) * 100).toFixed(1) + "%",
+      })
+
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(compressedFile)
+      setImage(previewUrl)
+      setCompressedFile(compressedFile)
+
+      // Convert to base64 for analysis
+      const reader = new FileReader()
+      reader.onload = async (e) => {
+        const base64 = e.target?.result as string
+        if (base64) {
+          await analyzeImage(base64)
+        }
+      }
+      reader.readAsDataURL(compressedFile)
     } catch (error) {
-      console.error("[v0] Error creating object URL:", error)
-      alert("Failed to process file. Please try again.")
+      console.error("[v0] Error processing image:", error)
+      alert(`Failed to process image: ${error instanceof Error ? error.message : "Unknown error"}. Please try again.`)
+    } finally {
+      setProcessing(false)
     }
   }
 
@@ -133,6 +103,8 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
     } else {
       console.log("[v0] No file selected from camera")
     }
+    // Reset input value to allow selecting the same file again
+    event.target.value = ""
   }
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -144,16 +116,20 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
     } else {
       console.log("[v0] No file selected for upload")
     }
+    // Reset input value to allow selecting the same file again
+    event.target.value = ""
   }
 
   const analyzeImage = async (imageDataUrl: string) => {
     if (!imageDataUrl || !imageDataUrl.startsWith("data:image/") || imageDataUrl.length < 100) {
-      alert("Invalid image data. Please try taking another photo.")
+      console.warn("[v0] Invalid image data for analysis")
       return
     }
 
     setAnalyzing(true)
     try {
+      console.log("[v0] Starting image analysis...")
+
       const response = await fetch("/api/wardrobe/analyze-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -162,6 +138,8 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
 
       if (response.ok) {
         const analysis = await response.json()
+        console.log("[v0] Image analysis completed:", analysis)
+
         setFormData({
           name: analysis.name || "",
           category: analysis.category || "",
@@ -171,12 +149,12 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
         })
       } else {
         const errorData = await response.json()
-        console.error("Image analysis failed:", errorData)
-        alert("Failed to analyze image. Please try again.")
+        console.error("[v0] Image analysis failed:", errorData)
+        // Don't show alert for analysis failures, just continue without auto-fill
       }
     } catch (error) {
-      console.error("Failed to analyze image:", error)
-      alert("Failed to analyze image. Please check your connection and try again.")
+      console.error("[v0] Failed to analyze image:", error)
+      // Don't show alert for analysis failures, just continue without auto-fill
     } finally {
       setAnalyzing(false)
     }
@@ -184,7 +162,10 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!compressedFile) return
+    if (!compressedFile) {
+      alert("No image selected. Please take a photo or upload an image first.")
+      return
+    }
 
     setUploading(true)
     try {
@@ -219,9 +200,7 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
         console.log("[v0] Wardrobe item created:", item)
         onAdd(item)
         setOpen(false)
-        setImage(null)
-        setCompressedFile(null)
-        setFormData({ name: "", category: "", brand: "", color: "", size: "" })
+        resetDialog()
       } else {
         const errorData = await response.json()
         console.error("[v0] Failed to create wardrobe item:", errorData)
@@ -236,9 +215,14 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
   }
 
   const resetDialog = () => {
+    if (image) {
+      URL.revokeObjectURL(image) // Clean up object URL
+    }
     setImage(null)
     setCompressedFile(null)
     setFormData({ name: "", category: "", brand: "", color: "", size: "" })
+    setProcessing(false)
+    setAnalyzing(false)
   }
 
   return (
@@ -264,7 +248,7 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
           <DialogDescription>Take a photo or upload an image to add to your wardrobe</DialogDescription>
         </DialogHeader>
 
-        {!image && (
+        {!image && !processing && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <Button onClick={() => cameraInputRef.current?.click()} className="flex-col h-20">
@@ -288,7 +272,17 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
           </div>
         )}
 
-        {image && (
+        {processing && (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin mr-3" />
+            <div className="text-center">
+              <p className="font-medium">Processing image...</p>
+              <p className="text-sm text-muted-foreground">Compressing and optimizing</p>
+            </div>
+          </div>
+        )}
+
+        {image && !processing && (
           <div className="space-y-4">
             <div className="relative aspect-square rounded-lg overflow-hidden">
               <Image src={image || "/placeholder.svg"} alt="Captured item" fill className="object-cover" />
@@ -384,8 +378,6 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
             </form>
           </div>
         )}
-
-        <canvas ref={canvasRef} className="hidden" />
       </DialogContent>
     </Dialog>
   )
