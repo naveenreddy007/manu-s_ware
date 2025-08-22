@@ -4,13 +4,24 @@ import { cookies } from "next/headers"
 
 export async function POST(request: Request) {
   const cookieStore = cookies()
-  const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
-    cookies: {
-      get(name: string) {
-        return cookieStore.get(name)?.value
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value
+        },
+        set(name: string, value: string, options: any) {
+          // Server-side routes can't set cookies, but we need this for the client interface
+        },
+        remove(name: string, options: any) {
+          // Server-side routes can't remove cookies, but we need this for the client interface
+        },
       },
     },
-  })
+  )
 
   const {
     data: { user },

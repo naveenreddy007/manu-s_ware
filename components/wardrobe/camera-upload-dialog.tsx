@@ -15,7 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Camera, Upload, Loader2, RotateCcw } from "lucide-react"
+import { Camera, Upload, Loader2 } from "lucide-react"
 import Image from "next/image"
 
 interface CameraUploadDialogProps {
@@ -35,43 +35,11 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
     color: "",
     size: "",
   })
+
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const videoRef = useRef<HTMLVideoElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [stream, setStream] = useState<MediaStream | null>(null)
-  const [showCamera, setShowCamera] = useState(false)
-  const [facingMode, setFacingMode] = useState<"user" | "environment">("environment")
   const [compressedFile, setCompressedFile] = useState<File | null>(null)
-
-  const startCamera = async () => {
-    try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode },
-      })
-      setStream(mediaStream)
-      setShowCamera(true)
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream
-      }
-    } catch (error) {
-      console.error("Error accessing camera:", error)
-      alert("Unable to access camera. Please use file upload instead.")
-    }
-  }
-
-  const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop())
-      setStream(null)
-    }
-    setShowCamera(false)
-  }
-
-  const switchCamera = async () => {
-    stopCamera()
-    setFacingMode(facingMode === "user" ? "environment" : "user")
-    setTimeout(() => startCamera(), 100)
-  }
 
   const compressImage = (canvas: HTMLCanvasElement, quality = 0.8): Promise<File> => {
     return new Promise((resolve) => {
@@ -91,69 +59,52 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
     })
   }
 
-  const capturePhoto = async () => {
-    if (videoRef.current && canvasRef.current) {
-      const canvas = canvasRef.current
-      const video = videoRef.current
-      const context = canvas.getContext("2d")
+  const processImage = async (file: File) => {
+    const canvas = document.createElement("canvas")
+    const ctx = canvas.getContext("2d")
+    const img = new Image()
 
-      const maxSize = 1024
-      const videoWidth = video.videoWidth
-      const videoHeight = video.videoHeight
-      const ratio = Math.min(maxSize / videoWidth, maxSize / videoHeight)
+    img.onload = async () => {
+      try {
+        const maxSize = 1024
+        const ratio = Math.min(maxSize / img.width, maxSize / img.height)
+        canvas.width = img.width * ratio
+        canvas.height = img.height * ratio
 
-      canvas.width = videoWidth * ratio
-      canvas.height = videoHeight * ratio
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+          const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.8)
+          setImage(compressedDataUrl)
 
-      if (context) {
-        context.drawImage(video, 0, 0, canvas.width, canvas.height)
-        const imageDataUrl = canvas.toDataURL("image/jpeg", 0.8)
-        setImage(imageDataUrl)
+          const compressedFile = await compressImage(canvas, 0.8)
+          setCompressedFile(compressedFile)
 
-        const compressedFile = await compressImage(canvas, 0.8)
-        setCompressedFile(compressedFile)
-
-        stopCamera()
-        analyzeImage(imageDataUrl)
+          analyzeImage(compressedDataUrl)
+        }
+      } catch (error) {
+        console.error("Error processing image:", error)
+        alert("Failed to process image. Please try again.")
       }
+    }
+
+    img.onerror = () => {
+      alert("Failed to load image. Please select a valid image file.")
+    }
+
+    img.src = URL.createObjectURL(file)
+  }
+
+  const handleCameraCapture = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      await processImage(file)
     }
   }
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
-      const canvas = document.createElement("canvas")
-      const ctx = canvas.getContext("2d")
-      const img = new Image()
-
-      img.onload = async () => {
-        try {
-          const maxSize = 1024
-          const ratio = Math.min(maxSize / img.width, maxSize / img.height)
-          canvas.width = img.width * ratio
-          canvas.height = img.height * ratio
-
-          if (ctx) {
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-            const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.8)
-            setImage(compressedDataUrl)
-
-            const compressedFile = await compressImage(canvas, 0.8)
-            setCompressedFile(compressedFile)
-
-            analyzeImage(compressedDataUrl)
-          }
-        } catch (error) {
-          console.error("Error processing image:", error)
-          alert("Failed to process image. Please try again.")
-        }
-      }
-
-      img.onerror = () => {
-        alert("Failed to load image. Please select a valid image file.")
-      }
-
-      img.src = URL.createObjectURL(file)
+      await processImage(file)
     }
   }
 
@@ -240,7 +191,6 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
     setImage(null)
     setCompressedFile(null)
     setFormData({ name: "", category: "", brand: "", color: "", size: "" })
-    stopCamera()
   }
 
   return (
@@ -266,10 +216,10 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
           <DialogDescription>Take a photo or upload an image to add to your wardrobe</DialogDescription>
         </DialogHeader>
 
-        {!image && !showCamera && (
+        {!image && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <Button onClick={startCamera} className="flex-col h-20">
+              <Button onClick={() => cameraInputRef.current?.click()} className="flex-col h-20">
                 <Camera className="h-6 w-6 mb-2" />
                 Take Photo
               </Button>
@@ -278,25 +228,15 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
                 Upload Image
               </Button>
             </div>
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleCameraCapture}
+              className="hidden"
+            />
             <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
-          </div>
-        )}
-
-        {showCamera && (
-          <div className="space-y-4">
-            <video ref={videoRef} autoPlay playsInline className="w-full rounded-lg" />
-            <div className="flex gap-2">
-              <Button onClick={capturePhoto} className="flex-1">
-                <Camera className="h-4 w-4 mr-2" />
-                Capture
-              </Button>
-              <Button variant="outline" onClick={switchCamera} size="icon">
-                <RotateCcw className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" onClick={stopCamera}>
-                Cancel
-              </Button>
-            </div>
           </div>
         )}
 
