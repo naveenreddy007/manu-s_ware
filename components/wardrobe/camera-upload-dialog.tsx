@@ -15,7 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Camera, Upload, Loader2 } from "lucide-react"
+import { Camera, Upload, Loader2, RotateCcw } from "lucide-react"
 import Image from "next/image"
 
 interface CameraUploadDialogProps {
@@ -40,11 +40,13 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [stream, setStream] = useState<MediaStream | null>(null)
   const [showCamera, setShowCamera] = useState(false)
+  const [facingMode, setFacingMode] = useState<"user" | "environment">("environment")
+  const [compressedFile, setCompressedFile] = useState<File | null>(null)
 
   const startCamera = async () => {
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" }, // Use back camera on mobile
+        video: { facingMode },
       })
       setStream(mediaStream)
       setShowCamera(true)
@@ -65,37 +67,69 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
     setShowCamera(false)
   }
 
-  const capturePhoto = () => {
+  const switchCamera = async () => {
+    stopCamera()
+    setFacingMode(facingMode === "user" ? "environment" : "user")
+    setTimeout(() => startCamera(), 100)
+  }
+
+  const compressImage = (canvas: HTMLCanvasElement, quality = 0.8): Promise<File> => {
+    return new Promise((resolve) => {
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            const file = new File([blob], `wardrobe-item-${Date.now()}.jpg`, {
+              type: "image/jpeg",
+              lastModified: Date.now(),
+            })
+            resolve(file)
+          }
+        },
+        "image/jpeg",
+        quality,
+      )
+    })
+  }
+
+  const capturePhoto = async () => {
     if (videoRef.current && canvasRef.current) {
       const canvas = canvasRef.current
       const video = videoRef.current
       const context = canvas.getContext("2d")
 
-      canvas.width = video.videoWidth
-      canvas.height = video.videoHeight
+      const maxSize = 1024
+      const videoWidth = video.videoWidth
+      const videoHeight = video.videoHeight
+      const ratio = Math.min(maxSize / videoWidth, maxSize / videoHeight)
+
+      canvas.width = videoWidth * ratio
+      canvas.height = videoHeight * ratio
 
       if (context) {
-        context.drawImage(video, 0, 0)
-        const imageDataUrl = canvas.toDataURL("image/jpeg", 0.85)
+        context.drawImage(video, 0, 0, canvas.width, canvas.height)
+        const imageDataUrl = canvas.toDataURL("image/jpeg", 0.8)
         setImage(imageDataUrl)
+
+        const compressedFile = await compressImage(canvas, 0.8)
+        setCompressedFile(compressedFile)
+
         stopCamera()
         analyzeImage(imageDataUrl)
       }
     }
   }
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
       const canvas = document.createElement("canvas")
       const ctx = canvas.getContext("2d")
       const img = new Image()
 
-      img.onload = () => {
+      img.onload = async () => {
         try {
-          // Calculate new dimensions (max 1024px width for better quality)
-          const maxWidth = 1024
-          const ratio = Math.min(maxWidth / img.width, maxWidth / img.height)
+          const maxSize = 1024
+          const ratio = Math.min(maxSize / img.width, maxSize / img.height)
           canvas.width = img.width * ratio
           canvas.height = img.height * ratio
 
@@ -103,6 +137,10 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
             const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.8)
             setImage(compressedDataUrl)
+
+            const compressedFile = await compressImage(canvas, 0.8)
+            setCompressedFile(compressedFile)
+
             analyzeImage(compressedDataUrl)
           }
         } catch (error) {
@@ -147,16 +185,18 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!image) return
+    if (!compressedFile) return
 
     setUploading(true)
     try {
       console.log("[v0] Starting wardrobe item upload")
 
+      const uploadFormData = new FormData()
+      uploadFormData.append("file", compressedFile)
+
       const uploadResponse = await fetch("/api/wardrobe/upload-image", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image }),
+        body: uploadFormData,
       })
 
       const uploadResult = await uploadResponse.json()
@@ -181,6 +221,7 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
         onAdd(item)
         setOpen(false)
         setImage(null)
+        setCompressedFile(null)
         setFormData({ name: "", category: "", brand: "", color: "", size: "" })
       } else {
         const errorData = await response.json()
@@ -197,6 +238,7 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
 
   const resetDialog = () => {
     setImage(null)
+    setCompressedFile(null)
     setFormData({ name: "", category: "", brand: "", color: "", size: "" })
     stopCamera()
   }
@@ -247,6 +289,9 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
               <Button onClick={capturePhoto} className="flex-1">
                 <Camera className="h-4 w-4 mr-2" />
                 Capture
+              </Button>
+              <Button variant="outline" onClick={switchCamera} size="icon">
+                <RotateCcw className="h-4 w-4" />
               </Button>
               <Button variant="outline" onClick={stopCamera}>
                 Cancel
