@@ -13,34 +13,59 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { image } = await request.json()
+    const formData = await request.formData()
+    const file = formData.get("file") as File
 
-    // Convert base64 to buffer
-    const base64Data = image.replace(/^data:image\/[a-z]+;base64,/, "")
-    const buffer = Buffer.from(base64Data, "base64")
+    if (!file) {
+      return NextResponse.json({ error: "No file provided" }, { status: 400 })
+    }
 
-    // Generate unique filename
-    const filename = `${user.id}/${Date.now()}-wardrobe-item.jpg`
+    console.log("[v0] Starting image upload for user:", user.id)
+    console.log("[v0] File details:", { name: file.name, size: file.size, type: file.type })
+
+    const buffer = Buffer.from(await file.arrayBuffer())
+
+    // Generate unique filename with user folder structure
+    const fileExtension = file.name.split(".").pop() || "jpg"
+    const filename = `${user.id}/${Date.now()}-wardrobe-item.${fileExtension}`
+
+    console.log("[v0] Uploading to filename:", filename)
 
     // Upload to Supabase Storage
     const { data, error } = await supabase.storage.from("images").upload(filename, buffer, {
-      contentType: "image/jpeg",
+      contentType: file.type || "image/jpeg",
       upsert: false,
     })
 
     if (error) {
-      console.error("Storage upload error:", error)
-      return NextResponse.json({ error: "Failed to upload image" }, { status: 500 })
+      console.error("[v0] Storage upload error:", error)
+      return NextResponse.json(
+        {
+          error: "Failed to upload image",
+          details: error.message,
+        },
+        { status: 500 },
+      )
     }
+
+    console.log("[v0] Upload successful:", data)
 
     // Get public URL
     const {
       data: { publicUrl },
     } = supabase.storage.from("images").getPublicUrl(filename)
 
+    console.log("[v0] Generated public URL:", publicUrl)
+
     return NextResponse.json({ imageUrl: publicUrl })
   } catch (error) {
-    console.error("Image upload error:", error)
-    return NextResponse.json({ error: "Failed to upload image" }, { status: 500 })
+    console.error("[v0] Image upload error:", error)
+    return NextResponse.json(
+      {
+        error: "Failed to upload image",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }

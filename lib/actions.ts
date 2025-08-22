@@ -212,10 +212,10 @@ export async function signInWithGoogle() {
     }
 
     if (data.url) {
-      redirect(data.url)
+      return { success: true, redirectUrl: data.url }
     }
 
-    return { success: true }
+    return { error: "No redirect URL received from Google" }
   } catch (error) {
     console.error("[v0] Google sign-in error:", error)
     return { error: "Failed to sign in with Google. Please try again." }

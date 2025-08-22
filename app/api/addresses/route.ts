@@ -14,7 +14,7 @@ export async function GET() {
     }
 
     const { data: addresses, error } = await supabase
-      .from("customer_addresses")
+      .from("addresses")
       .select("*")
       .eq("user_id", user.id)
       .order("is_default", { ascending: false })
@@ -45,15 +45,11 @@ export async function POST(request: Request) {
     const body = await request.json()
 
     if (body.is_default) {
-      await supabase
-        .from("customer_addresses")
-        .update({ is_default: false })
-        .eq("user_id", user.id)
-        .eq("type", body.type)
+      await supabase.from("addresses").update({ is_default: false }).eq("user_id", user.id)
     }
 
     const { data: address, error } = await supabase
-      .from("customer_addresses")
+      .from("addresses")
       .insert({
         ...body,
         user_id: user.id,

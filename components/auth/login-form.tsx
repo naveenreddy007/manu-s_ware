@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { signIn, signInWithGoogle } from "@/lib/actions"
 
 function SubmitButton() {
@@ -74,10 +74,34 @@ export default function LoginForm() {
   const router = useRouter()
   const [state, formAction] = useActionState(signIn, null)
   const [googleState, googleFormAction] = useActionState(signInWithGoogle, null)
+  const [networkError, setNetworkError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (state?.success || googleState?.success) {
+    const handleAuthError = (error: any) => {
+      console.error("[v0] Auth error caught:", error)
+      if (error.message?.includes("Failed to fetch")) {
+        setNetworkError("Network connection issue. Please check your internet connection and try again.")
+      }
+    }
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      if (event.reason?.message?.includes("Failed to fetch")) {
+        event.preventDefault()
+        handleAuthError(event.reason)
+      }
+    }
+
+    window.addEventListener("unhandledrejection", handleUnhandledRejection)
+
+    if (state?.success) {
       router.push("/wardrobe")
+    }
+    if (googleState?.success && googleState?.redirectUrl) {
+      window.location.href = googleState.redirectUrl
+    }
+
+    return () => {
+      window.removeEventListener("unhandledrejection", handleUnhandledRejection)
     }
   }, [state, googleState, router])
 
@@ -89,6 +113,23 @@ export default function LoginForm() {
       </CardHeader>
 
       <CardContent>
+        {networkError && (
+          <div className="bg-destructive/10 border border-destructive/50 text-destructive px-4 py-3 rounded mb-4">
+            {networkError}
+            <Button
+              variant="outline"
+              size="sm"
+              className="ml-2 bg-transparent"
+              onClick={() => {
+                setNetworkError(null)
+                window.location.reload()
+              }}
+            >
+              Retry
+            </Button>
+          </div>
+        )}
+
         <form action={googleFormAction} className="mb-4">
           {googleState?.error && (
             <div className="bg-destructive/10 border border-destructive/50 text-destructive px-4 py-3 rounded mb-4">

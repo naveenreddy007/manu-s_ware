@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2 } from "lucide-react"
 import Link from "next/link"
+import { useEffect } from "react"
 import { signUp, signInWithGoogle } from "@/lib/actions"
 
 function SubmitButton() {
@@ -71,6 +72,12 @@ function GoogleSignUpButton() {
 export default function SignUpForm() {
   const [state, formAction] = useActionState(signUp, null)
   const [googleState, googleFormAction] = useActionState(signInWithGoogle, null)
+
+  useEffect(() => {
+    if (googleState?.success && googleState?.redirectUrl) {
+      window.location.href = googleState.redirectUrl
+    }
+  }, [googleState])
 
   return (
     <Card className="w-full max-w-md">

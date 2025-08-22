@@ -76,7 +76,7 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
 
       if (context) {
         context.drawImage(video, 0, 0)
-        const imageDataUrl = canvas.toDataURL("image/jpeg", 0.8)
+        const imageDataUrl = canvas.toDataURL("image/jpeg", 0.85)
         setImage(imageDataUrl)
         stopCamera()
         analyzeImage(imageDataUrl)
@@ -87,24 +87,32 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
-      // Compress image before processing
       const canvas = document.createElement("canvas")
       const ctx = canvas.getContext("2d")
       const img = new Image()
 
       img.onload = () => {
-        // Calculate new dimensions (max 800px width)
-        const maxWidth = 800
-        const ratio = Math.min(maxWidth / img.width, maxWidth / img.height)
-        canvas.width = img.width * ratio
-        canvas.height = img.height * ratio
+        try {
+          // Calculate new dimensions (max 1024px width for better quality)
+          const maxWidth = 1024
+          const ratio = Math.min(maxWidth / img.width, maxWidth / img.height)
+          canvas.width = img.width * ratio
+          canvas.height = img.height * ratio
 
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-          const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.7)
-          setImage(compressedDataUrl)
-          analyzeImage(compressedDataUrl)
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+            const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.8)
+            setImage(compressedDataUrl)
+            analyzeImage(compressedDataUrl)
+          }
+        } catch (error) {
+          console.error("Error processing image:", error)
+          alert("Failed to process image. Please try again.")
         }
+      }
+
+      img.onerror = () => {
+        alert("Failed to load image. Please select a valid image file.")
       }
 
       img.src = URL.createObjectURL(file)
@@ -143,33 +151,45 @@ export function CameraUploadDialog({ onAdd, categories }: CameraUploadDialogProp
 
     setUploading(true)
     try {
-      // Upload image to storage
+      console.log("[v0] Starting wardrobe item upload")
+
       const uploadResponse = await fetch("/api/wardrobe/upload-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image }),
       })
 
-      if (uploadResponse.ok) {
-        const { imageUrl } = await uploadResponse.json()
+      const uploadResult = await uploadResponse.json()
 
-        // Create wardrobe item
-        const response = await fetch("/api/wardrobe", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...formData, image_url: imageUrl }),
-        })
+      if (!uploadResponse.ok) {
+        console.error("[v0] Upload failed:", uploadResult)
+        alert(`Upload failed: ${uploadResult.details || uploadResult.error}`)
+        return
+      }
 
-        if (response.ok) {
-          const { item } = await response.json()
-          onAdd(item)
-          setOpen(false)
-          setImage(null)
-          setFormData({ name: "", category: "", brand: "", color: "", size: "" })
-        }
+      console.log("[v0] Image uploaded successfully:", uploadResult.imageUrl)
+
+      const response = await fetch("/api/wardrobe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...formData, image_url: uploadResult.imageUrl }),
+      })
+
+      if (response.ok) {
+        const { item } = await response.json()
+        console.log("[v0] Wardrobe item created:", item)
+        onAdd(item)
+        setOpen(false)
+        setImage(null)
+        setFormData({ name: "", category: "", brand: "", color: "", size: "" })
+      } else {
+        const errorData = await response.json()
+        console.error("[v0] Failed to create wardrobe item:", errorData)
+        alert(`Failed to create item: ${errorData.error}`)
       }
     } catch (error) {
-      console.error("Failed to upload item:", error)
+      console.error("[v0] Failed to upload item:", error)
+      alert("Failed to upload item. Please try again.")
     } finally {
       setUploading(false)
     }

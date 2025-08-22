@@ -61,19 +61,29 @@ export default function WardrobePage() {
   const fetchItems = async () => {
     setLoading(true)
     try {
+      console.log("[v0] Fetching wardrobe items...")
       const params = new URLSearchParams()
       if (selectedCategory !== "all") params.set("category", selectedCategory)
 
       const response = await fetch(`/api/wardrobe?${params}`)
       const data = await response.json()
 
+      console.log("[v0] Wardrobe API response:", data)
+
       if (response.ok) {
-        setItems(data.items || [])
+        const wardrobeData = data.items || data.data || data || []
+        const itemsArray = Array.isArray(wardrobeData) ? wardrobeData : []
+        setItems(itemsArray)
+        console.log("[v0] Set wardrobe items:", itemsArray.length)
       } else if (response.status === 401) {
         router.push("/auth/login")
+      } else {
+        console.error("[v0] Error fetching items:", data)
+        setItems([])
       }
     } catch (error) {
-      console.error("Failed to fetch wardrobe items:", error)
+      console.error("Error fetching items: wardrobeData.map is not a function", error)
+      setItems([])
     } finally {
       setLoading(false)
     }
@@ -119,23 +129,23 @@ export default function WardrobePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
+      <header className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40">
+        <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" asChild>
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" asChild className="h-9 w-9">
                 <Link href="/">
                   <ArrowLeft className="h-5 w-5" />
                 </Link>
               </Button>
               <div>
-                <h1 className="text-xl font-heading font-black text-primary">My Wardrobe</h1>
-                <p className="text-sm text-muted-foreground">{user.email}</p>
+                <h1 className="text-lg md:text-xl font-heading font-black text-primary">My Wardrobe</h1>
+                <p className="text-xs md:text-sm text-muted-foreground truncate max-w-[200px]">{user?.email}</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1 border border-border rounded-md p-1">
+            <div className="flex items-center gap-2">
+              <div className="hidden sm:flex items-center gap-1 border border-border rounded-md p-1">
                 <Button
                   variant={viewMode === "grid" ? "default" : "ghost"}
                   size="icon"
@@ -162,10 +172,10 @@ export default function WardrobePage() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-4 md:py-8">
         {/* Filters */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-4">
+        <div className="mb-6 md:mb-8">
+          <div className="flex items-center gap-2 mb-3 md:mb-4">
             <Filter className="h-4 w-4 text-muted-foreground" />
             <h3 className="font-heading font-semibold text-sm">Categories</h3>
           </div>
@@ -173,7 +183,7 @@ export default function WardrobePage() {
           <div className="flex flex-wrap gap-2">
             <Badge
               variant={selectedCategory === "all" ? "default" : "outline"}
-              className={`cursor-pointer transition-colors ${
+              className={`cursor-pointer transition-colors text-xs ${
                 selectedCategory === "all" ? "bg-primary text-primary-foreground hover:bg-primary/90" : "hover:bg-muted"
               }`}
               onClick={() => setSelectedCategory("all")}
@@ -187,7 +197,7 @@ export default function WardrobePage() {
                 <Badge
                   key={category.id}
                   variant={selectedCategory === category.name ? "default" : "outline"}
-                  className={`cursor-pointer transition-colors capitalize ${
+                  className={`cursor-pointer transition-colors capitalize text-xs ${
                     selectedCategory === category.name
                       ? "bg-primary text-primary-foreground hover:bg-primary/90"
                       : "hover:bg-muted"
@@ -203,7 +213,7 @@ export default function WardrobePage() {
 
         {/* Items Grid */}
         {loading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
             {[...Array(8)].map((_, i) => (
               <div key={i} className="animate-pulse">
                 <div className="bg-muted aspect-[3/4] rounded-lg mb-3" />
@@ -217,7 +227,9 @@ export default function WardrobePage() {
         ) : items.length > 0 ? (
           <div
             className={
-              viewMode === "grid" ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4" : "space-y-4"
+              viewMode === "grid"
+                ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4"
+                : "space-y-3 md:space-y-4"
             }
           >
             {items.map((item) => (
@@ -226,12 +238,12 @@ export default function WardrobePage() {
           </div>
         ) : (
           <div className="text-center py-12">
-            <p className="text-muted-foreground mb-4">
+            <p className="text-muted-foreground mb-4 text-sm md:text-base">
               {selectedCategory === "all"
                 ? "Your wardrobe is empty. Start by adding your first item!"
                 : `No ${selectedCategory} items found.`}
             </p>
-            <div className="flex gap-2 justify-center">
+            <div className="flex gap-2 justify-center flex-wrap">
               <CameraUploadDialog onAdd={handleAddItem} categories={mainCategories.map((cat) => cat.name)} />
               <AddItemDialog onAdd={handleAddItem} categories={mainCategories.map((cat) => cat.name)} />
             </div>

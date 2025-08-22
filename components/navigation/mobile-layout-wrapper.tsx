@@ -67,7 +67,7 @@ export function MobileLayoutWrapper({ children }: MobileLayoutWrapperProps) {
   return (
     <div className="min-h-screen bg-background">
       <MobileHeader user={user} notifications={notifications} />
-      <main className="pb-20 md:pb-0">{children}</main>
+      <main className="pb-[80px] md:pb-0 min-h-[calc(100vh-140px)]">{children}</main>
       <MobileBottomNav user={user} cartCount={cartCount} />
     </div>
   )

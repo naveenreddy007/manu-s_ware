@@ -26,13 +26,50 @@ export function createClient() {
     }
   }
 
-  return createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true,
+  const client = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true,
+        // Add retry configuration for failed requests
+        retryAttempts: 3,
+        // Handle network errors gracefully
+        onAuthStateChange: (event, session) => {
+          console.log("[v0] Auth state changed:", event, session?.user?.id || "no user")
+        },
+      },
+      global: {
+        // Add custom fetch with error handling
+        fetch: async (url, options = {}) => {
+          try {
+            console.log("[v0] Supabase fetch attempt:", url)
+            const response = await fetch(url, {
+              ...options,
+              // Add timeout to prevent hanging requests
+              signal: AbortSignal.timeout(10000), // 10 second timeout
+            })
+            console.log("[v0] Supabase fetch success:", response.status)
+            return response
+          } catch (error) {
+            console.error("[v0] Supabase fetch error:", error)
+            // Return a mock response for failed auth requests to prevent crashes
+            if (url.includes("/auth/")) {
+              return new Response(JSON.stringify({ error: { message: "Network error" } }), {
+                status: 500,
+                headers: { "Content-Type": "application/json" },
+              })
+            }
+            throw error
+          }
+        },
+      },
     },
-  })
+  )
+
+  return client
 }
 
 // Create a singleton instance of the Supabase client for Client Components

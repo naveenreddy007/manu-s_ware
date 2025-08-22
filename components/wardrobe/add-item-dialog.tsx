@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -16,8 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Badge } from "@/components/ui/badge"
-import { Plus, X } from "lucide-react"
+import { Plus, Camera, Upload, Loader2 } from "lucide-react"
 
 interface AddItemDialogProps {
   onAdd: (item: any) => void
@@ -38,6 +37,41 @@ export function AddItemDialog({ onAdd, categories }: AddItemDialogProps) {
   })
   const [tags, setTags] = useState<string[]>([])
   const [newTag, setNewTag] = useState("")
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadMethod, setUploadMethod] = useState<"url" | "upload">("url")
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+
+  const handleImageUpload = async (file: File) => {
+    setIsUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+
+      const response = await fetch("/api/wardrobe/upload-image", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (response.ok) {
+        const { imageUrl } = await response.json()
+        setFormData((prev) => ({ ...prev, image_url: imageUrl }))
+      } else {
+        console.error("Failed to upload image")
+      }
+    } catch (error) {
+      console.error("Error uploading image:", error)
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      handleImageUpload(file)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -64,6 +98,7 @@ export function AddItemDialog({ onAdd, categories }: AddItemDialogProps) {
           notes: "",
         })
         setTags([])
+        setUploadMethod("url")
       }
     } catch (error) {
       console.error("Failed to add item:", error)
@@ -161,36 +196,75 @@ export function AddItemDialog({ onAdd, categories }: AddItemDialogProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="image_url">Image URL</Label>
-            <Input
-              id="image_url"
-              value={formData.image_url}
-              onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-              placeholder="https://..."
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Tags</Label>
-            <div className="flex gap-2">
-              <Input
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                placeholder="Add tag"
-                onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addTag())}
-              />
-              <Button type="button" onClick={addTag} size="sm">
-                Add
+            <Label>Item Image</Label>
+            <div className="flex gap-2 mb-2">
+              <Button
+                type="button"
+                variant={uploadMethod === "url" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setUploadMethod("url")}
+              >
+                URL
+              </Button>
+              <Button
+                type="button"
+                variant={uploadMethod === "upload" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setUploadMethod("upload")}
+              >
+                Upload
               </Button>
             </div>
-            {tags.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {tags.map((tag) => (
-                  <Badge key={tag} variant="secondary" className="gap-1">
-                    {tag}
-                    <X className="h-3 w-3 cursor-pointer" onClick={() => removeTag(tag)} />
-                  </Badge>
-                ))}
+
+            {uploadMethod === "url" ? (
+              <Input
+                id="image_url"
+                value={formData.image_url}
+                onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                placeholder="https://..."
+              />
+            ) : (
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                    className="flex-1"
+                  >
+                    {isUploading ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Upload className="h-4 w-4 mr-2" />
+                    )}
+                    Choose File
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => cameraInputRef.current?.click()}
+                    disabled={isUploading}
+                    className="flex-1"
+                  >
+                    {isUploading ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Camera className="h-4 w-4 mr-2" />
+                    )}
+                    Camera
+                  </Button>
+                </div>
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
+                <input
+                  ref={cameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                {formData.image_url && <div className="text-sm text-green-600">✓ Image uploaded successfully</div>}
               </div>
             )}
           </div>
