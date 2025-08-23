@@ -21,17 +21,18 @@ import {
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { useCart } from "@/contexts/CartContext"
 
 interface MobileBottomNavProps {
   user?: any
-  cartCount?: number
 }
 
-export function MobileBottomNav({ user, cartCount = 0 }: MobileBottomNavProps) {
+export function MobileBottomNav({ user }: MobileBottomNavProps) {
   const pathname = usePathname()
   const [isMoreOpen, setIsMoreOpen] = useState(false)
   const [quickPayAmount, setQuickPayAmount] = useState(0)
   const [showQuickPay, setShowQuickPay] = useState(false)
+  const { cartCount } = useCart()
 
   // Quick payment amounts for micro-transactions
   const quickPayAmounts = [10, 25, 50, 100, 250, 500]

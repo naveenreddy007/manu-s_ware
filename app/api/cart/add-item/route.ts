@@ -77,7 +77,6 @@ export async function POST(request: NextRequest) {
         },
       })
     } else {
-      // Add new item to cart
       const { data: newItem, error: insertError } = await supabase
         .from("cart_items")
         .insert({

@@ -2,6 +2,7 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Montserrat, Open_Sans } from "next/font/google"
 import { MobileLayoutWrapper } from "@/components/navigation/mobile-layout-wrapper"
+import { CartProvider } from "@/contexts/CartContext"
 import "./globals.css"
 
 const montserrat = Montserrat({
@@ -45,7 +46,9 @@ html {
         <meta name="apple-mobile-web-app-title" content="MANUS" />
       </head>
       <body>
-        <MobileLayoutWrapper>{children}</MobileLayoutWrapper>
+        <CartProvider>
+          <MobileLayoutWrapper>{children}</MobileLayoutWrapper>
+        </CartProvider>
       </body>
     </html>
   )

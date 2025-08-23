@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { ShoppingBag, Loader2, Check } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useCart } from "@/contexts/CartContext"
 
 interface Product {
   id: string
@@ -21,6 +22,7 @@ export default function AddToCartButton({ product, size = "sm", className }: Add
   const [loading, setLoading] = useState(false)
   const [added, setAdded] = useState(false)
   const { toast } = useToast()
+  const { refreshCart } = useCart()
 
   const handleAddToCart = async () => {
     setLoading(true)
@@ -49,7 +51,8 @@ export default function AddToCartButton({ product, size = "sm", className }: Add
         description: `${product.name} has been added to your cart.`,
       })
 
-      // Reset the added state after 2 seconds
+      await refreshCart()
+
       setTimeout(() => setAdded(false), 2000)
     } catch (error) {
       console.error("Failed to add to cart:", error)

@@ -8,7 +8,9 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { IndianRupee, ImageIcon, Upload } from "lucide-react"
+import { IndianRupee, Upload, X } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
+import { toast } from "@/hooks/use-toast"
 
 interface Product {
   id: string
@@ -30,6 +32,7 @@ interface Product {
   neckline?: string
   sleeve_length?: string
   formality_score?: number
+  images?: string[]
 }
 
 interface ProductFormProps {
@@ -56,33 +59,99 @@ const sleeveLengthOptions = ["short", "long", "sleeveless", "3/4", "cap", "bell"
 
 export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
   const [selectedCategory, setSelectedCategory] = useState(product?.category || "")
+  const [selectedImages, setSelectedImages] = useState<File[]>([])
+  const [imageUrls, setImageUrls] = useState<string[]>(product?.images || [])
+  const [uploading, setUploading] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    const formData = new FormData(e.currentTarget)
+  const handleImageUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return
 
-    const productData = {
-      name: formData.get("name") as string,
-      description: formData.get("description") as string,
-      price: Number.parseFloat(formData.get("price") as string),
-      category: formData.get("category") as string,
-      subcategory: formData.get("subcategory") as string,
-      brand: formData.get("brand") as string,
-      image_url: formData.get("image_url") as string,
-      stock_quantity: Number.parseInt(formData.get("stock_quantity") as string),
-      is_active: formData.get("is_active") === "on",
-      style: formData.get("style") as string,
-      pattern: formData.get("pattern") as string,
-      material: formData.get("material") as string,
-      occasion: formData.get("occasion") as string,
-      season: formData.get("season") as string,
-      fit: formData.get("fit") as string,
-      neckline: formData.get("neckline") as string,
-      sleeve_length: formData.get("sleeve_length") as string,
-      formality_score: Number.parseInt(formData.get("formality_score") as string) || 3,
+    const newFiles = Array.from(files)
+    setSelectedImages((prev) => [...prev, ...newFiles])
+
+    // Create preview URLs
+    const newUrls = newFiles.map((file) => URL.createObjectURL(file))
+    setImageUrls((prev) => [...prev, ...newUrls])
+  }
+
+  const uploadImagesToStorage = async (files: File[]): Promise<string[]> => {
+    const supabase = createClient()
+    const uploadedUrls: string[] = []
+
+    for (const file of files) {
+      const fileExt = file.name.split(".").pop()
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
+      const filePath = `products/${fileName}`
+
+      const { data, error } = await supabase.storage.from("product-images").upload(filePath, file)
+
+      if (error) {
+        console.error("Error uploading image:", error)
+        throw error
+      }
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("product-images").getPublicUrl(filePath)
+
+      uploadedUrls.push(publicUrl)
     }
 
-    onSubmit(productData)
+    return uploadedUrls
+  }
+
+  const removeImage = (index: number) => {
+    setImageUrls((prev) => prev.filter((_, i) => i !== index))
+    setSelectedImages((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setUploading(true)
+
+    try {
+      const formData = new FormData(e.currentTarget)
+
+      let finalImageUrls = [...imageUrls.filter((url) => !url.startsWith("blob:"))]
+
+      if (selectedImages.length > 0) {
+        const uploadedUrls = await uploadImagesToStorage(selectedImages)
+        finalImageUrls = [...finalImageUrls, ...uploadedUrls]
+      }
+
+      const productData = {
+        name: formData.get("name") as string,
+        description: formData.get("description") as string,
+        price: Number.parseFloat(formData.get("price") as string),
+        category: formData.get("category") as string,
+        subcategory: formData.get("subcategory") as string,
+        brand: formData.get("brand") as string,
+        image_url: finalImageUrls[0] || "",
+        images: finalImageUrls,
+        stock_quantity: Number.parseInt(formData.get("stock_quantity") as string),
+        is_active: formData.get("is_active") === "on",
+        style: formData.get("style") as string,
+        pattern: formData.get("pattern") as string,
+        material: formData.get("material") as string,
+        occasion: formData.get("occasion") as string,
+        season: formData.get("season") as string,
+        fit: formData.get("fit") as string,
+        neckline: formData.get("neckline") as string,
+        sleeve_length: formData.get("sleeve_length") as string,
+        formality_score: Number.parseInt(formData.get("formality_score") as string) || 3,
+      }
+
+      onSubmit(productData)
+    } catch (error) {
+      console.error("Error uploading images:", error)
+      toast({
+        title: "Error uploading images",
+        description: "Please try again",
+        variant: "destructive",
+      })
+    } finally {
+      setUploading(false)
+    }
   }
 
   return (
@@ -172,22 +241,51 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
       </div>
 
       <div>
-        <Label htmlFor="image_url">Image URL *</Label>
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <ImageIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+        <Label htmlFor="images">Product Images *</Label>
+        <div className="space-y-4">
+          <div className="flex gap-2">
             <Input
-              id="image_url"
-              name="image_url"
-              type="url"
-              className="pl-10"
-              defaultValue={product?.image_url}
-              required
+              id="images"
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={(e) => handleImageUpload(e.target.files)}
+              className="flex-1"
             />
+            <Button type="button" variant="outline" onClick={() => document.getElementById("images")?.click()}>
+              <Upload className="h-4 w-4 mr-2" />
+              Upload Images
+            </Button>
           </div>
-          <Button type="button" variant="outline">
-            <Upload className="h-4 w-4" />
-          </Button>
+
+          {/* Image preview grid */}
+          {imageUrls.length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {imageUrls.map((url, index) => (
+                <div key={index} className="relative group">
+                  <img
+                    src={url || "/placeholder.svg"}
+                    alt={`Product image ${index + 1}`}
+                    className="w-full h-24 object-cover rounded-md border"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => removeImage(index)}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                  {index === 0 && (
+                    <div className="absolute bottom-1 left-1 bg-primary text-primary-foreground text-xs px-1 rounded">
+                      Main
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -344,10 +442,10 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
       </div>
 
       <div className="flex gap-2 pt-4">
-        <Button type="submit" className="flex-1">
-          {product ? "Update Product" : "Create Product"}
+        <Button type="submit" className="flex-1" disabled={uploading}>
+          {uploading ? "Uploading..." : product ? "Update Product" : "Create Product"}
         </Button>
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button" variant="outline" onClick={onCancel} disabled={uploading}>
           Cancel
         </Button>
       </div>

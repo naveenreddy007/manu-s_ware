@@ -8,6 +8,7 @@ import { ShoppingBag, Plus, Minus, X, CreditCard } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { formatCurrency } from "@/lib/utils/currency"
+import { useCart } from "@/contexts/CartContext"
 
 interface CartItem {
   id: string
@@ -30,7 +31,7 @@ export function CartSidebar({ itemCount = 0 }: CartSidebarProps) {
   const [items, setItems] = useState<CartItem[]>([])
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
-  const [totalItems, setTotalItems] = useState(0)
+  const { cartCount, refreshCart } = useCart()
 
   useEffect(() => {
     if (open) {
@@ -42,8 +43,6 @@ export function CartSidebar({ itemCount = 0 }: CartSidebarProps) {
     const handleCartUpdate = () => {
       if (open) {
         fetchCartItems()
-      } else {
-        fetchCartCount()
       }
     }
 
@@ -58,25 +57,11 @@ export function CartSidebar({ itemCount = 0 }: CartSidebarProps) {
       if (response.ok) {
         const data = await response.json()
         setItems(data.items || [])
-        const count = data.items?.reduce((sum: number, item: CartItem) => sum + item.quantity, 0) || 0
-        setTotalItems(count)
       }
     } catch (error) {
       console.error("Failed to fetch cart items:", error)
     } finally {
       setLoading(false)
-    }
-  }
-
-  const fetchCartCount = async () => {
-    try {
-      const response = await fetch("/api/cart/count")
-      if (response.ok) {
-        const data = await response.json()
-        setTotalItems(data.count)
-      }
-    } catch (error) {
-      console.error("Failed to fetch cart count:", error)
     }
   }
 
@@ -91,15 +76,12 @@ export function CartSidebar({ itemCount = 0 }: CartSidebarProps) {
       if (response.ok) {
         if (newQuantity <= 0) {
           setItems(items.filter((item) => item.id !== itemId))
-          setTotalItems((prev) => prev - items.find((item) => item.id === itemId)?.quantity || 0)
         } else {
           const data = await response.json()
-          const oldQuantity = items.find((item) => item.id === itemId)?.quantity || 0
           setItems(items.map((item) => (item.id === itemId ? data.item : item)))
-          setTotalItems((prev) => prev - oldQuantity + newQuantity)
         }
 
-        // Trigger cart update event
+        await refreshCart()
         window.dispatchEvent(new CustomEvent("cartUpdated"))
       }
     } catch (error) {
@@ -114,9 +96,9 @@ export function CartSidebar({ itemCount = 0 }: CartSidebarProps) {
       <SheetTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <ShoppingBag className="h-5 w-5" />
-          {totalItems > 0 && (
+          {cartCount > 0 && (
             <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-primary text-primary-foreground">
-              {totalItems}
+              {cartCount}
             </Badge>
           )}
         </Button>
@@ -126,7 +108,7 @@ export function CartSidebar({ itemCount = 0 }: CartSidebarProps) {
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <ShoppingBag className="h-5 w-5" />
-            Shopping Cart ({totalItems})
+            Shopping Cart ({cartCount})
           </SheetTitle>
         </SheetHeader>
 
@@ -143,7 +125,6 @@ export function CartSidebar({ itemCount = 0 }: CartSidebarProps) {
             </div>
           ) : (
             <>
-              {/* Cart Items */}
               <div className="flex-1 overflow-y-auto py-4 space-y-4">
                 {items.map((item) => (
                   <div key={item.id} className="flex gap-3 p-3 border border-border rounded-lg">
@@ -189,7 +170,6 @@ export function CartSidebar({ itemCount = 0 }: CartSidebarProps) {
                 ))}
               </div>
 
-              {/* Cart Summary */}
               <div className="border-t border-border pt-4 space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-foreground">Total</span>

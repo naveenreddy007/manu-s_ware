@@ -13,21 +13,11 @@ interface MobileLayoutWrapperProps {
 
 export function MobileLayoutWrapper({ children }: MobileLayoutWrapperProps) {
   const [user, setUser] = useState<any>(null)
-  const [cartCount, setCartCount] = useState(0)
   const [notifications, setNotifications] = useState(0)
 
   useEffect(() => {
     checkAuth()
-    fetchCartCount()
     fetchNotifications()
-
-    // Listen for cart updates
-    const handleCartUpdate = () => {
-      fetchCartCount()
-    }
-
-    window.addEventListener("cartUpdated", handleCartUpdate)
-    return () => window.removeEventListener("cartUpdated", handleCartUpdate)
   }, [])
 
   const checkAuth = async () => {
@@ -36,18 +26,6 @@ export function MobileLayoutWrapper({ children }: MobileLayoutWrapperProps) {
       data: { user },
     } = await supabase.auth.getUser()
     setUser(user)
-  }
-
-  const fetchCartCount = async () => {
-    try {
-      const response = await fetch("/api/cart/count")
-      if (response.ok) {
-        const data = await response.json()
-        setCartCount(data.count)
-      }
-    } catch (error) {
-      console.error("Failed to fetch cart count:", error)
-    }
   }
 
   const fetchNotifications = async () => {
@@ -68,7 +46,7 @@ export function MobileLayoutWrapper({ children }: MobileLayoutWrapperProps) {
     <div className="min-h-screen bg-background">
       <MobileHeader user={user} notifications={notifications} />
       <main className="pb-[80px] md:pb-0 min-h-[calc(100vh-140px)]">{children}</main>
-      <MobileBottomNav user={user} cartCount={cartCount} />
+      <MobileBottomNav user={user} />
     </div>
   )
 }

@@ -79,19 +79,37 @@ export default function LoginForm() {
   useEffect(() => {
     const handleAuthError = (error: any) => {
       console.error("[v0] Auth error caught:", error)
-      if (error.message?.includes("Failed to fetch")) {
-        setNetworkError("Network connection issue. Please check your internet connection and try again.")
+      if (error.message?.includes("Failed to fetch") || error.message?.includes("Network error")) {
+        setNetworkError(
+          "Unable to connect to authentication service. Please check your internet connection and try again.",
+        )
+      } else if (error.message?.includes("timeout")) {
+        setNetworkError("Connection timeout. Please try again.")
+      } else if (error.message?.includes("Invalid Refresh Token")) {
+        setNetworkError("Session expired. Please sign in again.")
+        localStorage.removeItem("supabase.auth.token")
       }
     }
 
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      if (event.reason?.message?.includes("Failed to fetch")) {
+      if (
+        event.reason?.message?.includes("Failed to fetch") ||
+        event.reason?.message?.includes("Network error") ||
+        event.reason?.message?.includes("timeout")
+      ) {
         event.preventDefault()
         handleAuthError(event.reason)
       }
     }
 
+    const handleError = (event: ErrorEvent) => {
+      if (event.error?.message?.includes("Failed to fetch") || event.error?.message?.includes("Network error")) {
+        handleAuthError(event.error)
+      }
+    }
+
     window.addEventListener("unhandledrejection", handleUnhandledRejection)
+    window.addEventListener("error", handleError)
 
     if (state?.success) {
       router.push("/wardrobe")
@@ -102,6 +120,7 @@ export default function LoginForm() {
 
     return () => {
       window.removeEventListener("unhandledrejection", handleUnhandledRejection)
+      window.removeEventListener("error", handleError)
     }
   }, [state, googleState, router])
 
